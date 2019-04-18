@@ -65,7 +65,8 @@ def findTimes (tokens, refTier, cursor) :
         if ref_tokens[n] == pauseSign or not(ref_tokens[n]) : continue # interdiction d'aligner le début de la phrase sur une pause ou un vide
         while True:
             try: ref_tokens_sampled = ref_tokens[n:n+width] ; break 
-            except IndexError: if width > 0: width -= 1
+            except IndexError: 
+                  if width > 0: width -= 1
               
         ref_sent = ' '.join(ref_tokens_sampled)
         dist = distance(sent, ref_sent)
