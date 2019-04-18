@@ -176,7 +176,7 @@ while conll_tg_pairs:
       tg     = prt.TextGrid(file_path=inTg_path, codec='utf-8')               #lecture du fichier textgrid (Praat)
       outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED')
     except:
-      print('fail to read {}'.format(tg))
+      print('error: fail to read {}'.format(inTg_path))
       continue
       
     print('\t{:s} {:s}'.format('<-',conll_path))
