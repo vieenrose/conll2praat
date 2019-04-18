@@ -102,20 +102,39 @@ def findTimes (tokens, refTier, cursor) :
           
     return [tmin, tmax, cursor_out]
     
-def filename_paring (filename_to_match, filenames, min_match_len = 10):
+def one_to_many_pairing (file1, files2, thld = 6):
 
-      matched_filename = ''
-      max_match_len = 0
+      matched = ''
+      maxlen = -1
+      doublon = False
       
-      for filename in filenames : 
-            none1,none2,match_len = \
-            SequenceMatcher(None, filename_to_match, filename).find_longest_match(0, len(filename_to_match), 0, len(filename))
-            if match_len > max_match_len and match_len > min_match_len : 
-                  max_match_len = match_len
-                  matched_filename = filename
+      for file2 in files2 :
+            nonenone,nonenone,match_len = \
+                SequenceMatcher(None, file1, file2).\
+		    find_longest_match(0, len(file1), 0, len(file2))
+            if match_len > max(thld , maxlen):
+                  maxlen = match_len
+                  matched = file2
+                  doublon = False
+            elif match_len == maxlen:
+                  doublon = True
 
-      return matched_filename
+      # don't make a pair if at the end, a doublon remains
+      if doublon : matched = ''
 
+      return matched
+      
+def make_paires(files1, files2):
+      # fine 1-to-1 file pair
+      pairs = []
+      for f1 in files1 :
+          f2 = one_to_many_pairing(f1, files2)
+          if f2 :
+              if f1 == one_to_many_pairing(f2, files1) : 
+                pairs.append((f1,f2))
+
+      return pairs
+      
 # filelists / tiernames / constants
 
 # creattion of a frendly command-line interface using argparse
@@ -126,15 +145,10 @@ parser.add_argument('praat_out', help = 'folder for output praat files')
 args = parser.parse_args()
 # make conll - praat pairs
 conllFiles   = os.listdir(args.conll_in)
-conllFiles.sort(reverse=True)
+conllFiles.sort()
 inputTgFiles = os.listdir(args.praat_in)
-conll_tg_pairs = []
-for filename in conllFiles :
-      matched_tg_file = filename_paring(filename, inputTgFiles)
-      if matched_tg_file : 
-            inputTgFiles.remove(matched_tg_file)
-            conll_tg_pairs.append((filename,matched_tg_file))
-
+conll_tg_pairs = make_paires(conllFiles, inputTgFiles)
+conll_tg_pairs_bak = conll_tg_pairs
 out_rep     = args.praat_out
 if not os.path.exists(out_rep):
         os.makedirs(out_rep)
@@ -147,10 +161,11 @@ srcCol       = 2 # 'FORM' (CoNLL)
 
 # todo : ajout le soutien du TextGrid integré dans un fichier .Collection
 # todo : recherche automatique du time reference tier
+#for n,p in enumerate(conll_tg_pairs_bak): print('{}:\t{:5s}: {}\n\t{:5s}: {}\n'.format(n,'conll',p[0],'tg',p[1]))
 
 # I/O handlers
 while conll_tg_pairs:
-    inconllFile,inTgfile = conll_tg_pairs.pop()
+    inconllFile,inTgfile = conll_tg_pairs[::-1].pop()
     print("\tFichier CONLL traité : {}".format(inconllFile))
     print("\tFichier TG traité : {}\n".format(inTgfile))
     conll  = csv.reader(open("./conllfiles/"+inconllFile, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
@@ -218,4 +233,7 @@ while conll_tg_pairs:
     tg.to_file(path, mode='binary', codec='utf-8')
     print("\n\nDONE.\n\n")
 
+print("Summaray of processed files: ")
+for n,p in enumerate(conll_tg_pairs_bak): 
+      print('{}:\t{:5s}: {}\n\t{:5s}: {}\n'.format(n,'conll',p[0],'tg',p[1]))
 #*****************************
