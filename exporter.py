@@ -8,10 +8,12 @@
 #     Sandy Duchemin
 #     Luigi Liu
 
-import re, csv, os, sys
+import re, csv, os, sys, argparse
+from difflib import SequenceMatcher
 import pympi.Praat as prt
 from collections import deque
 DEBUG = True
+min_acceptable_match_len = 6 # for conll - praat file pairing
 
 # outils
 def insert_to_basename(filename, inserted):
@@ -98,13 +100,40 @@ def findTimes (tokens, refTier, cursor) :
     cursor_out = best_end_n
           
     return [tmin, tmax, cursor_out]
+    
+def filename_paring (filename_to_match, filenames, min_match_len = 6):
+
+      matched_filename = ''
+      max_match_len = 0
+      
+      for filename in filenames : 
+            none1,none2,match_len = \
+            SequenceMatcher(None, filename_to_match, filename).find_longest_match(0, len(filename_to_match), 0, len(filename))
+            if match_len > max_match_len and match_len > min_match_len : 
+                  max_match_len = match_len
+                  matched_filename = filename
+
+      return matched_filename
 
 # filelists / tiernames / constants
-conllFile    = os.listdir(sys.argv[1])
-conllFile.sort()
-inputTgFile  = os.listdir(sys.argv[2])
-inputTgFile.sort()
-out_rep = sys.argv[3]
+
+# creattion of a frendly command-line interface using argparse
+parser = argparse.ArgumentParser(description='conll2praat exporter')
+parser.add_argument('conll_in', help = 'folder of conll files')
+parser.add_argument('praat_in', help = 'folder of input praat files')
+parser.add_argument('praat_out', help = 'folder for output praat files')
+args = parser.parse_args()
+# make conll - praat pairs
+conllFile   = os.listdir(args.conll_in)
+inputTgFile = os.listdir(args.praat_in)
+conll_tg_pairs = []
+for filename in conllFile :
+      matched_tg_file = filename_paring(filename, inputTgFile)
+      if matched_tg_file : 
+            inputTgFile.remove(matched_tg_file)
+            conll_tg_pairs.append((filename,matched_tg_file))
+
+out_rep     = args.praat_out
 if not os.path.exists(out_rep):
         os.makedirs(out_rep)
 refTierName  = 'mot'
@@ -121,7 +150,7 @@ exit()
 # todo : recherche automatique du time reference tier
 
 # I/O handlers
-for inconllFile, inTgfile in zip(conllFile, inputTgFile):
+for inconllFile, inTgfile in conll_tg_pairs:
     print("\tFichier TG traité : {}\n".format(inTgfile))
     conll  = csv.reader(open("./conllfiles/"+inconllFile, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
     tg     = prt.TextGrid(file_path="./tgfiles/"+inTgfile, codec='utf-8')               #lecture du fichier textgrid (Praat)
