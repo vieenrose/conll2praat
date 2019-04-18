@@ -200,11 +200,15 @@ while conll_tg_pairs:
             sent = ' '.join(tokens)
             deb_print("L{} sentence no.{} '... {}'".format(n,sentId,sent[-50:-1]))
             
-            [begin,end, cursor] = findTimes(tokens,ref, cursor)
-            deb_print("L{} (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
+            [begin,end, cursor_out] = findTimes(tokens,ref, cursor)
+            if cursor_out >= cursor : 
+                  cursor = cursor_out
+                  deb_print("L{} (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
                 
-            # écrire le contenu dans le tier de destination
-            dest.add_interval(begin=begin, end=end, value=sent, check=True)
+                  # écrire le contenu dans le tier de destination
+                  dest.add_interval(begin=begin, end=end, value=sent, check=True)
+            else:
+                  deb_print("L{} (begin,end) = (????????,????????)")
             
             # préparation à la prochaine phrase
             sentId += 1
