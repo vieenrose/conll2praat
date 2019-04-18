@@ -12,7 +12,7 @@ import re, csv, os, sys, argparse
 from difflib import SequenceMatcher
 import pympi.Praat as prt
 from collections import deque
-DEBUG = False
+DEBUG = True
 
 # outils
 def insert_to_basename(filename, inserted):
@@ -59,7 +59,7 @@ def findTimes (tokens, refTier, cursor) :
     best_end_ref_sent = ''
     
     # détection du début temporel
-    n_max = min(cursor + 10, len(ref_tokens))
+    n_max = min(cursor + 50, len(ref_tokens))
     for n in range(cursor, n_max) : 
         if ref_tokens[n] == pauseSign or not(ref_tokens[n]) : continue # interdiction d'aligner le début de la phrase sur une pause ou un vide
         ref_tokens_sampled = list(zip(*zip(tokens, ref_tokens[n:])))[-1]
