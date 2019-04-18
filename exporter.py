@@ -12,7 +12,7 @@ import re, csv, os, sys, argparse
 from difflib import SequenceMatcher
 import pympi.Praat as prt
 from collections import deque
-DEBUG = True
+DEBUG = False
 
 # outils
 def insert_to_basename(filename, inserted):
@@ -164,8 +164,9 @@ srcCol       = 2 # 'FORM' (CoNLL)
 #for n,p in enumerate(conll_tg_pairs_bak): print('{}:\t{:5s}: {}\n\t{:5s}: {}\n'.format(n,'conll',p[0],'tg',p[1]))
 
 # I/O handlers
+conll_tg_pairs = conll_tg_pairs[::-1]
 while conll_tg_pairs:
-    inconllFile,inTgfile = conll_tg_pairs[::-1].pop()
+    inconllFile,inTgfile = conll_tg_pairs.pop()
     print("\tFichier CONLL traité : {}".format(inconllFile))
     print("\tFichier TG traité : {}\n".format(inTgfile))
     conll  = csv.reader(open("./conllfiles/"+inconllFile, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
