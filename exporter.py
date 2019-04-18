@@ -57,12 +57,16 @@ def findTimes (tokens, refTier, cursor) :
     ref_tokens_sampled = []
     best_begin_ref_sent = ''
     best_end_ref_sent = ''
+    width = 2 * len(tokens)
     
     # détection du début temporel
     n_max = min(cursor + 50, len(ref_tokens))
     for n in range(cursor, n_max) : 
         if ref_tokens[n] == pauseSign or not(ref_tokens[n]) : continue # interdiction d'aligner le début de la phrase sur une pause ou un vide
-        ref_tokens_sampled = list(zip(*zip(tokens, ref_tokens[n:])))[-1]
+        while True:
+            try: ref_tokens_sampled = ref_tokens[n:n+width] ; break 
+            except IndexError: if width > 0: width -= 1
+              
         ref_sent = ' '.join(ref_tokens_sampled)
         dist = distance(sent, ref_sent)
         if best_dist < 0 or dist < best_dist : 
@@ -80,11 +84,7 @@ def findTimes (tokens, refTier, cursor) :
     width = 2 * len(tokens)
     while width :
         end_n = best_begin_n + width
-        try: ref_sent = ' '.join(ref_tokens[best_begin_n:end_n])
-        except IndexError: 
-              if width > 0: 
-                    width -= 1
-                    continue
+        ref_sent = ' '.join(ref_tokens[best_begin_n:end_n])
         dist = distance(sent[::-1], ref_sent[::-1])
         if best_dist < 0 or dist <= best_dist : 
             best_dist = dist
@@ -92,8 +92,8 @@ def findTimes (tokens, refTier, cursor) :
             best_sent = ref_sent
         width -= 1
     tmax = intvs[best_end_n - 1][1] # end time of the last interval
-    deb_print("\t@findTimes sent to match : '{}'".format(sent[-50:]))
-    deb_print("\t@findTimes sent found    : '{}'".format(best_sent[-50:], tmin, tmax))
+    deb_print("\t@findTimes sent to match : '{}'".format(sent))
+    deb_print("\t@findTimes sent found    : '{}'".format(best_sent, tmin, tmax))
     
     #if 'look for' in sent : exit() #debug
     #if 'customer' in sent : exit() #debug
