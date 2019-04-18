@@ -208,7 +208,7 @@ while conll_tg_pairs:
                   # écrire le contenu dans le tier de destination
                   dest.add_interval(begin=begin, end=end, value=sent, check=True)
             else:
-                  deb_print("L{} (begin,end) = (????????,????????)")
+                  deb_print("L{} (begin,end) = (????????,????????)".format(n))
             
             # préparation à la prochaine phrase
             sentId += 1
