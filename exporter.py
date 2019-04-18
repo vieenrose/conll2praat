@@ -36,7 +36,7 @@ def edit_distance(s1, s2):
             tbl[i,j] = min(tbl[i, j-1]+1, tbl[i-1, j]+1, tbl[i-1, j-1]+cost)
 
     return tbl[i,j]
-
+    
 def distance(s1, s2) :
 
       # retirer des signes de marcro qui ne sont pas présentes dans le tier de ref.
@@ -59,7 +59,6 @@ def findTimes (tokens, refTier, cursor) :
     best_end_ref_sent = ''
     
     # détection du début temporel
-    # n_max = len(intvs)
     n_max = min(cursor + 10, len(ref_tokens))
     for n in range(cursor, n_max) : 
         if ref_tokens[n] == pauseSign : continue # interdiction d'aligner le début de la phrase sur une pause
@@ -78,12 +77,15 @@ def findTimes (tokens, refTier, cursor) :
     # détection de la vraie fin temporelle
     best_dist = -1
     best_sent = ''
-    width = min(len(tokens), len(ref_tokens) - best_begin_n - 1)
+    width = 2 * len(tokens)
     while width :
         end_n = best_begin_n + width
-        ref_tokens_sampled = list(zip(*zip(tokens, ref_tokens[best_begin_n:end_n])))[-1]
-        ref_sent = ' '.join(ref_tokens_sampled)
-        dist = distance(sent, ref_sent)
+        try: ref_sent = ' '.join(ref_tokens[best_begin_n:end_n])
+        except IndexError: 
+              if width > 0: 
+                    width -= 1
+                    continue
+        dist = distance(sent[::-1], ref_sent[::-1])
         if best_dist < 0 or dist <= best_dist : 
             best_dist = dist
             best_end_n = end_n
@@ -91,7 +93,7 @@ def findTimes (tokens, refTier, cursor) :
         width -= 1
     tmax = intvs[best_end_n - 1][1] # end time of the last interval
     deb_print("\t@findTimes sent to match : '{}'".format(sent[-50:]))
-    deb_print("\t@findTimes sent found    : '{} ({:8.3f},{:8.3f})'".format(best_sent[-50:], tmin, tmax))
+    deb_print("\t@findTimes sent found    : '{}'".format(best_sent[-50:], tmin, tmax))
     
     #if 'look for' in sent : exit() #debug
     #if 'customer' in sent : exit() #debug
@@ -179,7 +181,7 @@ while conll_tg_pairs:
     # les métadonnées 
         if row and len(row) < 10 : 
             metadata = row[0]
-            deb_print("L{} mdata[:50] '{}'".format(n,metadata[:50]))
+            #deb_print("L{} mdata[:50] '{}'".format(n,metadata[:50]))
             continue
     
     # token dans une phrase
