@@ -40,7 +40,7 @@ def edit_distance(s1, s2):
 def distance(s1, s2) :
 
       # retirer des signes de marcro qui ne sont pas présentes dans le tier de ref.
-      macrosyntax_signs = re.compile(r"[\&\(\)\[\]\/\|\+\s\<\>]") 
+      macrosyntax_signs = re.compile(r"[\#\&\(\)\[\]\/\|\+\s\<\>]") 
       s1 = re.sub(macrosyntax_signs, "", s1.lower())
       s2 = re.sub(macrosyntax_signs, "", s2.lower())
       dist =  edit_distance(s1, s2[:len(s1)])
