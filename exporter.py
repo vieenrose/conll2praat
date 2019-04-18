@@ -124,13 +124,13 @@ parser.add_argument('praat_in', help = 'folder of input praat files')
 parser.add_argument('praat_out', help = 'folder for output praat files')
 args = parser.parse_args()
 # make conll - praat pairs
-conllFile   = os.listdir(args.conll_in)
-inputTgFile = os.listdir(args.praat_in)
+conllFiles   = os.listdir(args.conll_in)
+inputTgFiles = os.listdir(args.praat_in)
 conll_tg_pairs = []
-for filename in conllFile :
-      matched_tg_file = filename_paring(filename, inputTgFile)
+for filename in conllFiles :
+      matched_tg_file = filename_paring(filename, inputTgFiles)
       if matched_tg_file : 
-            inputTgFile.remove(matched_tg_file)
+            inputTgFiles.remove(matched_tg_file)
             conll_tg_pairs.append((filename,matched_tg_file))
 
 out_rep     = args.praat_out
@@ -142,9 +142,6 @@ refTierName3 = 'TokensAlign'
 destTierName = 'tx_new'
 pauseSign    = '#'
 srcCol       = 2 # 'FORM' (CoNLL)
-
-print([(x,y) for x,y in zip(conllFile, inputTgFile)]) # debug
-exit()
 
 # todo : ajout le soutien du TextGrid integré dans un fichier .Collection
 # todo : recherche automatique du time reference tier
