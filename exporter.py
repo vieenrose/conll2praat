@@ -152,9 +152,7 @@ conll_tg_pairs_bak = conll_tg_pairs
 out_rep     = args.praat_out
 if not os.path.exists(out_rep):
         os.makedirs(out_rep)
-refTierName  = 'mot'
-refTierName2 = 'MOT'
-refTierName3 = 'TokensAlign'
+refTierNames = ['mot','MOT','TokensAlign']
 destTierName = 'tx_new'
 pauseSign    = '#'
 srcCol       = 2 # 'FORM' (CoNLL)
@@ -167,23 +165,34 @@ srcCol       = 2 # 'FORM' (CoNLL)
 conll_tg_pairs = conll_tg_pairs[::-1]
 while conll_tg_pairs:
     inconllFile,inTgfile = conll_tg_pairs.pop()
-    print("\tFichier CONLL traité : {}".format(inconllFile))
-    print("\tFichier TG traité : {}\n".format(inTgfile))
-    conll  = csv.reader(open("./conllfiles/"+inconllFile, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
-    tg     = prt.TextGrid(file_path="./tgfiles/"+inTgfile, codec='utf-8')               #lecture du fichier textgrid (Praat)
-    outputTgFile = insert_to_basename(inTgfile,'_UPDATED')
-    try:
-        ref    = tg.get_tier(refTierName)  #tier de repères temporels ('mot')
-    except IndexError:
-        try:
-            ref    = tg.get_tier(refTierName2)  #tier de repères temporels ('MOT')
-        except :
-            ref    = tg.get_tier(refTierName3)  #tier de repères temporels ('TokensAlign')
+    #print("\tFichier CONLL traité : {}".format(inconllFile))
+    #print("\tFichier TG traité : {}\n".format(inTgfile))
+    conll_path = args.conll_in+'/'+inconllFile
+    inTg_path = args.praat_in+'/'+inTgfile
     
-    try : 
-        dest   = tg.get_tier(destTierName) #tier de destination ('tx')
-    except :
-        dest   = tg.add_tier(destTierName) #tier de destination ('tx')
+   
+    conll  = csv.reader(open(conll_path, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
+    try:
+      tg     = prt.TextGrid(file_path=inTg_path, codec='utf-8')               #lecture du fichier textgrid (Praat)
+      outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED')
+    except:
+      print('fail to read {}'.format(tg))
+      continue
+      
+    print('\t{:s} {:s}'.format('<-',conll_path))
+    print('\t{:s} {:s}'.format('<-',inTg_path))
+    print('\t{:s} {:s}'.format('->',outputTg_path))
+    
+    
+    # handel diff. reference tier names
+    for refTierName in refTierNames :
+        try:
+            ref    = tg.get_tier(refTierName)  #tier de repères temporels ('mot')
+            break
+        except IndexError:
+            pass
+            
+    dest   = tg.add_tier(destTierName) #tier de destination ('tx')
 
     # initialization
     tokens = []
@@ -230,8 +239,8 @@ while conll_tg_pairs:
             sentId += 1
             tokens = []
 
-    path =  "./{}/{}".format(out_rep, outputTgFile)           
-    tg.to_file(path, mode='binary', codec='utf-8')
+    #path =  "./{}/{}".format(out_rep, outputTgFile)           
+    tg.to_file(outputTg_path, mode='binary', codec='utf-8')
     print("\n\nDONE.\n\n")
 
 print("Summaray of processed files: ")
