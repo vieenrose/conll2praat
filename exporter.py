@@ -61,7 +61,7 @@ def findTimes (tokens, refTier, cursor) :
     # détection du début temporel
     n_max = min(cursor + 10, len(ref_tokens))
     for n in range(cursor, n_max) : 
-        if ref_tokens[n] == pauseSign : continue # interdiction d'aligner le début de la phrase sur une pause
+        if ref_tokens[n] == pauseSign or not(ref_tokens[n]) : continue # interdiction d'aligner le début de la phrase sur une pause ou un vide
         ref_tokens_sampled = list(zip(*zip(tokens, ref_tokens[n:])))[-1]
         ref_sent = ' '.join(ref_tokens_sampled)
         dist = distance(sent, ref_sent)
