@@ -251,7 +251,7 @@ print("Summaray of processed files: ")
 for n,p in enumerate(conll_tg_pairs_bak): 
       print('{}:\t{:5s}: {}\n\t{:5s}: {}'.format(n,'conll',p[0],'tg',p[1]))
       if p[0] not in err.keys():
-            print('\tprocess fails !')
+            print('\tprocess fails !\n')
       else: 
             num_err = err[p[0]] 
             if num_err: print('\tnumber of errors: {}\n'.format(num_err))
