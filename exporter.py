@@ -58,7 +58,7 @@ def findTimes (tokens, refTier, cursor) :
     best_begin_ref_sent = ''
     best_end_ref_sent = ''
     width = 2 * len(tokens)
-    max_offset = 50 # in num of tokens
+    max_offset = 10 # in num of tokens
     
     # détection du début temporel
     n_max = min(cursor + max_offset, len(ref_tokens))
@@ -250,10 +250,8 @@ while conll_tg_pairs:
 print("Summaray of processed files: ")
 for n,p in enumerate(conll_tg_pairs_bak): 
       print('{}:\t{:5s}: {}\n\t{:5s}: {}'.format(n,'conll',p[0],'tg',p[1]))
-      if p[0] not in err.keys():
-            print('\tprocess fails !\n')
-      else: 
+      if p[0] in err.keys():
             num_err = err[p[0]] 
-            if num_err: print('\tnumber of errors: {}\n'.format(num_err))
-      
+            if num_err: print('\tnumber of errors: {}'.format(num_err))
+      print('')
 #*****************************
