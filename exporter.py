@@ -8,7 +8,7 @@
 #     Sandy Duchemin
 #     Luigi Liu
 
-import re, csv, os, sys, argparse
+import re, csv, os, sys, argparse, collections
 from difflib import SequenceMatcher
 import pympi.Praat as prt
 from collections import deque
@@ -58,9 +58,10 @@ def findTimes (tokens, refTier, cursor) :
     best_begin_ref_sent = ''
     best_end_ref_sent = ''
     width = 2 * len(tokens)
+    max_offset = 50 # in num of tokens
     
     # détection du début temporel
-    n_max = min(cursor + 50, len(ref_tokens))
+    n_max = min(cursor + max_offset, len(ref_tokens))
     for n in range(cursor, n_max) : 
         if ref_tokens[n] == pauseSign or not(ref_tokens[n]) : continue # interdiction d'aligner le début de la phrase sur une pause ou un vide
         while True:
@@ -163,6 +164,7 @@ srcCol       = 2 # 'FORM' (CoNLL)
 #for n,p in enumerate(conll_tg_pairs_bak): print('{}:\t{:5s}: {}\n\t{:5s}: {}\n'.format(n,'conll',p[0],'tg',p[1]))
 
 # I/O handlers
+err = collections.Counter()
 conll_tg_pairs = conll_tg_pairs[::-1]
 while conll_tg_pairs:
     inconllFile,inTgfile = conll_tg_pairs.pop()
@@ -235,6 +237,7 @@ while conll_tg_pairs:
                   dest.add_interval(begin=begin, end=end, value=sent, check=True)
             else:
                   deb_print("L{} (begin,end) = (????????,????????)".format(n))
+                  err[inconllFile]+=1
             
             # préparation à la prochaine phrase
             sentId += 1
@@ -246,5 +249,11 @@ while conll_tg_pairs:
 
 print("Summaray of processed files: ")
 for n,p in enumerate(conll_tg_pairs_bak): 
-      print('{}:\t{:5s}: {}\n\t{:5s}: {}\n'.format(n,'conll',p[0],'tg',p[1]))
+      print('{}:\t{:5s}: {}\n\t{:5s}: {}'.format(n,'conll',p[0],'tg',p[1]))
+      if p[0] not in err.keys():
+            print('\tprocess fails !')
+      else: 
+            num_err = err[p[0]] 
+            if num_err: print('\tnumber of errors: {}\n'.format(num_err))
+      
 #*****************************
