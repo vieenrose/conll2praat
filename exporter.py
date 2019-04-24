@@ -12,7 +12,7 @@ import re, csv, os, sys, argparse, collections
 from difflib import SequenceMatcher
 import pympi.Praat as prt
 from collections import deque
-DEBUG = True
+DEBUG = False
 
 # outils
 def insert_to_basename(filename, inserted):
@@ -239,24 +239,25 @@ while conll_tg_pairs:
             [begin,end, cursor_out] = findTimes(tokens,ref, lowerbound=cursor, upperbound=cursor+50,thld = 0.10)
             if cursor_out >= cursor : 
                   cursor = cursor_out
-                  deb_print("L{} (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
+                  deb_print("L{} local (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
                 
                   # écrire le contenu dans le tier de destination
                   dest.add_interval(begin=begin, end=end, value=sent, check=True)
             else:
                   # try a global search but with a more strict threshold for distance
-                  [begin,end, cursor_out] = findTimes(tokens,ref, lowerbound=0, upperbound=cursor, thld = 0.05)
+                  [begin,end, cursor_out] = findTimes(tokens,ref, lowerbound=0, upperbound=-1, thld = 0.05)
                   if cursor_out >= 0 : 
-                        deb_print("L{} local (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
+                        #deb_print("L{} global (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
                   
                         # écrire le contenu dans le tier de destination
                         try:
                               dest.add_interval(begin=begin, end=end, value=sent, check=True)
+                              deb_print("L{} global (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
                         except: 
-                              deb_print("L{} global (begin,end) = (????????,????????)".format(n))
+                              print("L{} search fail (begin,end) = (????????,????????)".format(n))
                               err[inconllFile]+=1
                   else:
-                        deb_print("L{} (begin,end) = (????????,????????)".format(n))
+                        print("L{} search fail (begin,end) = (????????,????????)".format(n))
                         err[inconllFile]+=1
             
             # préparation à la prochaine phrase
