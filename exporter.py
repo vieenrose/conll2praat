@@ -58,20 +58,17 @@ def findTimes (tokens, refTier, cursor) :
     best_begin_ref_sent = ''
     best_end_ref_sent = ''
     width = 2 * len(tokens)
-    max_offset = 10 # in num of tokens
     
     # détection du début temporel
-    n_max = min(cursor + max_offset, len(ref_tokens))
-    for n in range(cursor, n_max) : 
+    for n in range(cursor,len(ref_tokens))[::-1] :
         if ref_tokens[n] == pauseSign or not(ref_tokens[n]) : continue # interdiction d'aligner le début de la phrase sur une pause ou un vide
         while True:
-            try: ref_tokens_sampled = ref_tokens[n:n+width] ; break 
-            except IndexError: 
-                  if width > 0: width -= 1
+            try: ref_tokens_sampled = ref_tokens[n:n+width] ; break
+            except IndexError: continue
               
         ref_sent = ' '.join(ref_tokens_sampled)
         dist = distance(sent, ref_sent)
-        if best_dist < 0 or dist < best_dist : 
+        if best_dist < 0 or dist <= best_dist :
             best_dist = dist
             best_begin_n = n
             best_begin_ref_sent = ref_sent
@@ -93,15 +90,18 @@ def findTimes (tokens, refTier, cursor) :
             best_end_n = end_n
             best_sent = ref_sent
         width -= 1
-    tmax = intvs[best_end_n - 1][1] # end time of the last interval
+        
+    # verify if dist < 10% of sentence length
     deb_print("\t@findTimes sent to match : '{}'".format(sent))
-    deb_print("\t@findTimes sent found    : '{}'".format(best_sent, tmin, tmax))
-    
-    #if 'look for' in sent : exit() #debug
-    #if 'customer' in sent : exit() #debug
-    
-    cursor_out = best_end_n
-          
+    if best_dist > 0.1 * (len(sent)**1.1):
+        tmin = -1; tmax = -1
+        cursor_out = -1
+        deb_print("\t@findTimes err : best dist. '{}' too large".format(best_dist))
+    else :
+        tmax = intvs[best_end_n - 1][1] # end time of the last interval
+        cursor_out = best_end_n
+        deb_print("\t@findTimes sent found    : '{}'".format(best_sent, tmin, tmax))
+
     return [tmin, tmax, cursor_out]
     
 def one_to_many_pairing (file1, files2, thld = 6):
@@ -226,7 +226,7 @@ while conll_tg_pairs:
     # saute de ligne à la frontière des phrases
         else :
             sent = ' '.join(tokens)
-            deb_print("L{} sentence no.{} '... {}'".format(n,sentId,sent[-50:-1]))
+            deb_print("L{} sentence no.{} '{}'".format(n,sentId,sent))
             
             [begin,end, cursor_out] = findTimes(tokens,ref, cursor)
             if cursor_out >= cursor : 
