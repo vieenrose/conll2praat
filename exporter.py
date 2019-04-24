@@ -46,7 +46,7 @@ def distance(s1, s2) :
       dist =  edit_distance(s1, s2[:len(s1)])
       return dist
       
-def findTimes (tokens, refTier, cursor) : 
+def findTimes (tokens, refTier, lowerbound, upperbound = -1, thld = 0.1) : 
       
     sent = ' '.join(tokens)
     intvs = refTier.get_all_intervals()
@@ -60,12 +60,19 @@ def findTimes (tokens, refTier, cursor) :
     width = 2 * len(tokens)
     
     # détection du début temporel
-    for n in range(cursor,len(ref_tokens))[::-1] :
+    if upperbound < 0: # interprete negative upper bound as unbounded case
+          upperbound = len(ref_tokens)
+    for n in range(lowerbound,upperbound)[::-1] :
+        # check if n is correct
+        try: ref_tokens[n]
+        except IndexError: continue
+        # adapt real width if necessary
+        try : ref_tokens_sampled = ref_tokens[n:n+width]
+        except IndexError: ref_tokens_sampled = ref_tokens[n:]
+        # check if the current token represnts a pause 
         if ref_tokens[n] == pauseSign or not(ref_tokens[n]) : continue # interdiction d'aligner le début de la phrase sur une pause ou un vide
-        while True:
-            try: ref_tokens_sampled = ref_tokens[n:n+width] ; break
-            except IndexError: continue
-              
+        
+        # search the begining
         ref_sent = ' '.join(ref_tokens_sampled)
         dist = distance(sent, ref_sent)
         if best_dist < 0 or dist <= best_dist :
@@ -93,7 +100,7 @@ def findTimes (tokens, refTier, cursor) :
         
     # verify if dist < 10% of sentence length
     deb_print("\t@findTimes sent to match : '{}'".format(sent))
-    if best_dist > 0.1 * (len(sent)**1.1):
+    if best_dist > thld * (len(sent)**1.1):
         tmin = -1; tmax = -1
         cursor_out = -1
         deb_print("\t@findTimes err : best dist. '{}' too large".format(best_dist))
@@ -228,7 +235,8 @@ while conll_tg_pairs:
             sent = ' '.join(tokens)
             deb_print("L{} sentence no.{} '{}'".format(n,sentId,sent))
             
-            [begin,end, cursor_out] = findTimes(tokens,ref, cursor)
+            # try a local search from cursor to end of time with by default thld.
+            [begin,end, cursor_out] = findTimes(tokens,ref, lowerbound=cursor, upperbound=cursor+50,thld = 0.10)
             if cursor_out >= cursor : 
                   cursor = cursor_out
                   deb_print("L{} (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
@@ -236,8 +244,20 @@ while conll_tg_pairs:
                   # écrire le contenu dans le tier de destination
                   dest.add_interval(begin=begin, end=end, value=sent, check=True)
             else:
-                  deb_print("L{} (begin,end) = (????????,????????)".format(n))
-                  err[inconllFile]+=1
+                  # try a global search but with a more strict threshold for distance
+                  [begin,end, cursor_out] = findTimes(tokens,ref, lowerbound=0, upperbound=cursor, thld = 0.05)
+                  if cursor_out >= 0 : 
+                        deb_print("L{} local (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
+                  
+                        # écrire le contenu dans le tier de destination
+                        try:
+                              dest.add_interval(begin=begin, end=end, value=sent, check=True)
+                        except: 
+                              deb_print("L{} global (begin,end) = (????????,????????)".format(n))
+                              err[inconllFile]+=1
+                  else:
+                        deb_print("L{} (begin,end) = (????????,????????)".format(n))
+                        err[inconllFile]+=1
             
             # préparation à la prochaine phrase
             sentId += 1
