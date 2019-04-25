@@ -119,8 +119,9 @@ class TextGridPlus(prt.TextGrid):
                   lg = lg.astype('>H')
             objname = ifile.read(lg).decode('ascii') # skip embeded oo name
 
-def insert_to_basename(filename, inserted):
+def insert_to_basename(filename, inserted, new_ext_name = None):
       basename, extension = os.path.splitext(filename)
+      if new_ext_name: extension = u'.'+new_ext_name
       return basename + inserted + extension
       
 def deb_print(x) : 
@@ -287,7 +288,7 @@ while conll_tg_pairs:
     conll  = csv.reader(open(conll_path, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
     try:
       tg     = TextGridPlus(file_path=inTg_path, codec='utf-8')               #lecture du fichier textgrid (Praat)
-      outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED')
+      outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED','TextGrid')
     except:
       print('error: fail to read {}'.format(inTg_path))
       continue
