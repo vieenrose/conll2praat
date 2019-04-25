@@ -12,9 +12,113 @@ import re, csv, os, sys, argparse, collections
 from difflib import SequenceMatcher
 import pympi.Praat as prt
 from collections import deque
+import sys, codecs, re, struct
 DEBUG = False
 
 # outils
+
+# extend original TextGrid reader to support praat Collection
+class TextGridPlus(prt.TextGrid):
+
+      def from_file(self, ifile, codec='ascii'):
+              """Read textgrid from stream.
+              :param file ifile: Stream to read from.
+              :param str codec: Text encoding for the input. Note that this will be
+                  ignored for binary TextGrids.
+              """
+              if ifile.read(12) == b'ooBinaryFile':
+                  def bin2str(ifile):
+                      textlen = struct.unpack('>h', ifile.read(2))[0]
+                      # Single byte characters
+                      if textlen >= 0:
+                          return ifile.read(textlen).decode('ascii')
+                      # Multi byte characters have initial len -1 and then \xff bytes
+                      elif textlen == -1:
+                          textlen = struct.unpack('>h', ifile.read(2))[0]
+                          data = ifile.read(textlen*2)
+                          # Hack to go from number to unicode in python3 and python2
+                          fun = unichr if 'unichr' in __builtins__.__dict__ else chr
+                          charlist = (data[i:i+2] for i in range(0, len(data), 2))
+                          return u''.join(
+                              fun(struct.unpack('>h', i)[0]) for i in charlist)
+
+		  # only difference is here :in the case of a Praat collection
+		  # jump to the begining of the embedded TextGrid object
+                  if ifile.read(ord(ifile.read(1))) == b'Collection': # skip oo type
+                        self.jump2TextGridBin(ifile, codec)
+
+                  self.xmin = struct.unpack('>d', ifile.read(8))[0]
+                  self.xmax = struct.unpack('>d', ifile.read(8))[0]
+                  ifile.read(1)  # skip <exists>
+                  self.tier_num = struct.unpack('>i', ifile.read(4))[0]
+                  for i in range(self.tier_num):
+                      tier_type = ifile.read(ord(ifile.read(1))).decode('ascii')
+                      name = bin2str(ifile)
+                      tier = prt.Tier(0, 0, name=name, tier_type=tier_type)
+                      self.tiers.append(tier)
+                      tier.xmin = struct.unpack('>d', ifile.read(8))[0]
+                      tier.xmax = struct.unpack('>d', ifile.read(8))[0]
+                      nint = struct.unpack('>i', ifile.read(4))[0]
+                      for i in range(nint):
+                          x1 = struct.unpack('>d', ifile.read(8))[0]
+                          if tier.tier_type == 'IntervalTier':
+                              x2 = struct.unpack('>d', ifile.read(8))[0]
+                          text = bin2str(ifile)
+                          if tier.tier_type == 'IntervalTier':
+                              tier.intervals.append((x1, x2, text))
+                          elif tier.tier_type == 'TextTier':
+                              tier.intervals.append((x1, text))
+                          else:
+                              raise Exception('Tiertype does not exist.')
+              else:
+                  def nn(ifile, pat):
+                      line = next(ifile).decode(codec)
+                      return pat.search(line).group(1)
+
+                  regfloat = re.compile('([\d.]+)\s*$', flags=re.UNICODE)
+                  regint = re.compile('([\d]+)\s*$', flags=re.UNICODE)
+                  regstr = re.compile('"(.*)"\s*$', flags=re.UNICODE)
+                  # Skip the Headers and empty line
+                  next(ifile), next(ifile), next(ifile)
+                  self.xmin = float(nn(ifile, regfloat))
+                  self.xmax = float(nn(ifile, regfloat))
+                  # Skip <exists>
+                  line = next(ifile)
+                  short = line.strip() == b'<exists>'
+                  self.tier_num = int(nn(ifile, regint))
+                  not short and next(ifile)
+                  for i in range(self.tier_num):
+                      not short and next(ifile)  # skip item[]: and item[\d]:
+                      tier_type = nn(ifile, regstr)
+                      name = nn(ifile, regstr)
+                      tier = Tier(0, 0, name=name, tier_type=tier_type)
+                      self.tiers.append(tier)
+                      tier.xmin = float(nn(ifile, regfloat))
+                      tier.xmax = float(nn(ifile, regfloat))
+                      for i in range(int(nn(ifile, regint))):
+                          not short and next(ifile)  # skip intervals [\d]
+                          x1 = float(nn(ifile, regfloat))
+                          if tier.tier_type == 'IntervalTier':
+                              x2 = float(nn(ifile, regfloat))
+                              t = nn(ifile, regstr)
+                              tier.intervals.append((x1, x2, t))
+                          elif tier.tier_type == 'TextTier':
+                              t = nn(ifile, regstr)
+                              tier.intervals.append((x1, t))
+
+      def jump2TextGridBin(self, ifile, codec='ascii', keyword =  b'\x08TextGrid'):
+            binstr = b''
+            while ifile: 
+                  binstr += ifile.read(1)
+                  if len(binstr) > len(keyword): 
+                        binstr = binstr[1:]
+                  if binstr == keyword : 
+                        break
+            lg = struct.unpack('>h', ifile.read(2))[0]
+            if lg == -1 : 
+                  lg = lg.astype('>H')
+            objname = ifile.read(lg).decode('ascii') # skip embeded oo name
+
 def insert_to_basename(filename, inserted):
       basename, extension = os.path.splitext(filename)
       return basename + inserted + extension
@@ -166,7 +270,6 @@ destTierName = 'tx_new'
 pauseSign    = '#'
 srcCol       = 2 # 'FORM' (CoNLL)
 
-# todo : ajout le soutien du TextGrid integré dans un fichier .Collection
 # todo : recherche automatique du time reference tier
 #for n,p in enumerate(conll_tg_pairs_bak): print('{}:\t{:5s}: {}\n\t{:5s}: {}\n'.format(n,'conll',p[0],'tg',p[1]))
 
@@ -183,7 +286,7 @@ while conll_tg_pairs:
    
     conll  = csv.reader(open(conll_path, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
     try:
-      tg     = prt.TextGrid(file_path=inTg_path, codec='utf-8')               #lecture du fichier textgrid (Praat)
+      tg     = TextGridPlus(file_path=inTg_path, codec='utf-8')               #lecture du fichier textgrid (Praat)
       outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED')
     except:
       print('error: fail to read {}'.format(inTg_path))
