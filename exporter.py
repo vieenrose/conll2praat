@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # exportateur Column @ CoNLL-U -> Tier @ Praat TextGrid
-# prerequisite : pympi.Praat
+# prerequisite : pympi.Praat, javaobj
+#
+# note: 1. javaobj could have some problem with python3 but works correctly under python2
 #
 # auteurs : 
 #     Sandy Duchemin
@@ -12,13 +14,84 @@ import re, csv, os, sys, argparse, collections
 from difflib import SequenceMatcher
 import pympi.Praat as prt
 from collections import deque
-import sys, codecs, re, struct
+import sys, codecs, re, struct, javaobj
 DEBUG = False
+
 
 # outils
 
-# extend original TextGrid reader to support praat Collection
+# extend original TextGrid reader to support praat Collection / Analor .or
 class TextGridPlus(prt.TextGrid):
+      
+      
+      def extractTextGridFromAnalorFile(self,ifile):
+            
+            SuccessOrNot = False
+            
+            try:
+                  marshaller = javaobj.JavaObjectUnmarshaller(ifile)
+            except IOError:
+                  ifile.seek(0, 0)
+                  return SuccessOrNot
+            
+            while True:
+
+                  # get one object
+                  pobj = marshaller.readObject()
+                  if pobj == 'FIN' or \
+                     pobj == '' : 
+                           break
+                  if pobj == 'F0':
+                     self.xmin, self.xmax = marshaller.readObject()
+                     
+                  # check if is at the tiers' header
+                  if pobj == 'TIRES':
+                        
+                        # get tier number 
+                        tier_num = marshaller.readObject()
+                        tier_num = struct.unpack('>i',tier_num)[0]
+                        
+                        while tier_num :
+                              # get the metadata of tier
+                                tlims = marshaller.readObject()
+                                typ = marshaller.readObject()
+                                nom = marshaller.readObject()
+                                mots = marshaller.readObject()
+                                bornes = marshaller.readObject()
+                                nomGuide = marshaller.readObject()
+                                
+                                # translation between 2 type naming
+                                # between Analor and Praat version
+                                if typ == 'INTERVALLE' : 
+                                      tier_type = 'IntervalTier'
+                                elif typ == 'POINT' : 
+                                      tier_type = 'TextTier'
+                                else : 
+                                      raise Exception('Tiertype does not exist.')
+                        
+                                # form a tier
+                                tier = prt.Tier(0, 0, name=nom, tier_type=tier_type) # bug
+                                self.tiers.append(tier)
+                                tier.xmin = tlims[0]
+                                tier.xmax = tlims[-1]
+                                if tier.tier_type == 'IntervalTier':
+                                    for x1,x2,text in zip(bornes,bornes[1:],mots):
+                                          tier.intervals.append((x1, x2, text))
+                                elif tier.tier_type == 'TextTier':
+                                    for x1,text in zip(bornes,mots):
+                                          tier.intervals.append((x1, text))
+                                else:
+                                    raise Exception('Tiertype does not exist.')
+
+                                # uncount the number of tiers remain to process
+                                if tier_num >0: 
+                                      tier_num -= 1;
+                                
+                                SuccessOrNot = True
+                                
+            ifile.seek(0, 0)
+            return SuccessOrNot
+      
 
       def from_file(self, ifile, codec='ascii'):
               """Read textgrid from stream.
@@ -26,7 +99,14 @@ class TextGridPlus(prt.TextGrid):
               :param str codec: Text encoding for the input. Note that this will be
                   ignored for binary TextGrids.
               """
-              if ifile.read(12) == b'ooBinaryFile':
+              # extract TextGrid form Analor file (.or)
+              
+              if self.extractTextGridFromAnalorFile(ifile): 
+                    pass
+                    
+              # read a Textgrid or extract TextGrid from Collection in Binary Format
+              elif ifile.read(12) == b'ooBinaryFile':
+                 
                   def bin2str(ifile):
                       textlen = struct.unpack('>h', ifile.read(2))[0]
                       # Single byte characters
@@ -42,11 +122,11 @@ class TextGridPlus(prt.TextGrid):
                           return u''.join(
                               fun(struct.unpack('>h', i)[0]) for i in charlist)
 
-		  # only difference is here :in the case of a Praat collection
+		  # only difference is here :in the case of a Praat Collection
 		  # jump to the begining of the embedded TextGrid object
                   if ifile.read(ord(ifile.read(1))) == b'Collection': # skip oo type
                         self.jump2TextGridBin(ifile, codec)
-
+                 
                   self.xmin = struct.unpack('>d', ifile.read(8))[0]
                   self.xmax = struct.unpack('>d', ifile.read(8))[0]
                   ifile.read(1)  # skip <exists>
@@ -70,6 +150,7 @@ class TextGridPlus(prt.TextGrid):
                               tier.intervals.append((x1, text))
                           else:
                               raise Exception('Tiertype does not exist.')
+             # read a TextGrid file in long/ short text format
               else:
                   def nn(ifile, pat):
                       line = next(ifile).decode(codec)
@@ -216,7 +297,7 @@ def findTimes (tokens, refTier, lowerbound, upperbound = -1, thld = 0.1) :
 
     return [tmin, tmax, cursor_out]
     
-def one_to_many_pairing (file1, files2, thld = 6):
+def one_to_many_pairing (file1, files2, thld = 5):
 
       matched = ''
       maxlen = -1
@@ -224,7 +305,7 @@ def one_to_many_pairing (file1, files2, thld = 6):
       
       for file2 in files2 :
             nonenone,nonenone,match_len = \
-                SequenceMatcher(None, file1, file2).\
+                SequenceMatcher(None, file1.lower(), file2.lower()).\
 		    find_longest_match(0, len(file1), 0, len(file2))
             if match_len > max(thld , maxlen):
                   maxlen = match_len
@@ -262,6 +343,10 @@ conllFiles   = os.listdir(args.conll_in)
 conllFiles.sort()
 inputTgFiles = os.listdir(args.praat_in)
 conll_tg_pairs = make_paires(conllFiles, inputTgFiles)
+print("File(s) to process : ")
+for n,p in enumerate(conll_tg_pairs):
+      print('{}:\t{:5s}: {}\n\t{:5s}: {}'.format(n,'conll',p[0],'tg',p[1]))
+print('')
 conll_tg_pairs_bak = conll_tg_pairs
 out_rep     = args.praat_out
 if not os.path.exists(out_rep):
@@ -346,7 +431,10 @@ while conll_tg_pairs:
                   deb_print("L{} local (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
                 
                   # écrire le contenu dans le tier de destination
-                  dest.add_interval(begin=begin, end=end, value=sent, check=True)
+                  try:
+                        dest.add_interval(begin=begin, end=end, value=sent, check=True)
+                  except:
+                        print('Warning: Anti-overlaps')
             else:
                   # try a global search but with a more strict threshold for distance
                   [begin,end, cursor_out] = findTimes(tokens,ref, lowerbound=0, upperbound=-1, thld = 0.05)
