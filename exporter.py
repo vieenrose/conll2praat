@@ -8,9 +8,11 @@
 #     Sandy Duchemin
 #     Luigi Liu
 
-import csv,os,argparse,collections,sys,codecs,re,struct,difflib,pympi.Praat
-import javaobj # it has some issues with python3
-import magic
+import csv,os,argparse,collections,sys,codecs,re,struct,difflib,pympi.Praat, magic
+
+javaobj_installed = True
+try: import javaobj # it has some issues with python3
+except: javaobj_installed = False
 DEBUG = False
 
 
@@ -35,10 +37,12 @@ def get_encoding(filepath):
 # extend original TextGrid reader to support praat Collection / Analor .or
 class TextGridPlus(pympi.Praat.TextGrid):
       
-      
       def extractTextGridFromAnalorFile(self,ifile):
             
             SuccessOrNot = False
+            
+            # not process Analor file when javaobj is not avaliable
+            if not javaobj_installed: return SuccessOrNot
             
             try:
                   marshaller = javaobj.JavaObjectUnmarshaller(ifile)
@@ -103,7 +107,7 @@ class TextGridPlus(pympi.Praat.TextGrid):
                                 
             ifile.seek(0, 0)
             return SuccessOrNot
-      
+            
 
       def from_file(self, ifile, codec='ascii'):
               """Read textgrid from stream.
@@ -114,10 +118,8 @@ class TextGridPlus(pympi.Praat.TextGrid):
               # extract TextGrid form Analor file (.or)
               if self.extractTextGridFromAnalorFile(ifile) : 
                     pass
-                    
               # read a Textgrid or extract TextGrid from Collection in Binary Format
               elif ifile.read(12) == b'ooBinaryFile':
-                 
                   def bin2str(ifile):
                       textlen = struct.unpack('>h', ifile.read(2))[0]
                       # Single byte characters
@@ -411,8 +413,8 @@ if __name__ == '__main__':
             enc[inTgfile] = get_encoding(inTg_path)
             tg     = TextGridPlus(file_path=inTg_path, codec=enc[inTgfile])               #lecture du fichier textgrid (Praat)
             outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED','TextGrid')
-          except:
-            print('error: fail to read {}'.format(inTg_path))
+          except  Exception as e:
+            print('Error: {}'.format(e))
             continue
       
           print('\t{:s} {:s}'.format('<-',conll_path))
