@@ -16,8 +16,11 @@ python3 exporter.py fichier_conll10 fichier_textgrid répertoire_résultats
 ```
 ## Entrées
 
-- Un fichier ou un répertoire contenant des fichiers .conll
-- Un fichier ou un répertoire contenant des fichiers .Textgrid ou des fichiers .Collection binaires ou .or
+- Un fichier ou un répertoire contenant des fichiers CoNLL-U **.conll**
+- Un fichier ou un répertoire contenant des fichiers 
+    - Praat **.TextGrid**
+    - Praat Binaire **.Collection**
+    - Analor **.or**
 
 ## Sortie
 
