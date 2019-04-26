@@ -12,7 +12,7 @@ import csv,os,argparse,collections,sys,codecs,re,struct,difflib,pympi.Praat, mag
 
 javaobj_installed = True
 try: import javaobj # it has some issues with python3
-except: javaobj_installed = False
+except Exception as e : javaobj_installed = False; print('Warning: {}'.format(e))
 DEBUG = False
 
 
@@ -22,13 +22,12 @@ DEBUG = False
 # ref: https://stackoverflow.com/questions/436220/how-to-determine-the-encoding-of-text
 def get_encoding(filepath):
 	encoding = None
+	blob = open(filepath,'rb').read()
 	try:
-		blob = open(filepath).read()
 		m = magic.open(magic.MAGIC_MIME_ENCODING)
 		m.load()
 		encoding = m.buffer(blob)  # "utf-8" "us-ascii" etc
-	except:
-		blob = open(filepath).read()
+	except Exception as e:
 		m = magic.Magic(mime_encoding=True)
 		encoding = m.from_buffer(blob)
 	if u'ascii' in encoding  : encoding= u'ascii'
@@ -115,6 +114,8 @@ class TextGridPlus(pympi.Praat.TextGrid):
               :param str codec: Text encoding for the input. Note that this will be
                   ignored for binary TextGrids.
               """
+              print('inside from  file') #debug
+              
               # extract TextGrid form Analor file (.or)
               if self.extractTextGridFromAnalorFile(ifile) : 
                     pass
@@ -407,10 +408,14 @@ if __name__ == '__main__':
           conll_path = args.conll_in+'/'+inconllFile
           inTg_path = args.praat_in+'/'+inTgfile
           
-         
-          conll  = csv.reader(open(conll_path, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
+          #lecture du fichier tabulaire (CoNLL-U)
+          conll  = csv.reader(open(conll_path, 'r'), delimiter='\t', quotechar='\\') 
+          
+          # detection of textgrid file encoding:utf-8, ascii, etc.
+          enc[inTgfile] = get_encoding(inTg_path)
+          
+          
           try:
-            enc[inTgfile] = get_encoding(inTg_path)
             tg     = TextGridPlus(file_path=inTg_path, codec=enc[inTgfile])               #lecture du fichier textgrid (Praat)
             outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED','TextGrid')
           except  Exception as e:
@@ -423,12 +428,14 @@ if __name__ == '__main__':
           
           
           # handel diff. reference tier names
+          ref = None
           for refTierName in refTierNames :
               try:
                   ref    = tg.get_tier(refTierName)  #tier de repères temporels ('mot')
                   break
               except IndexError:
                   pass
+          if not ref: print('Error: cannot find a good reference tier for time alignement!');continue
                   
           dest   = tg.add_tier(destTierName) #tier de destination ('tx')
 
@@ -472,8 +479,9 @@ if __name__ == '__main__':
                         # écrire le contenu dans le tier de destination
                         try:
                               dest.add_interval(begin=begin, end=end, value=sent, check=True)
-                        except:
+                        except Exception as e:
                               print('Warning: Anti-overlaps')
+                              print("Error : {}".format(e))
                         
                   else:
                         # try a global search but with a more strict threshold for distance
@@ -485,8 +493,9 @@ if __name__ == '__main__':
                               try:
                                     dest.add_interval(begin=begin, end=end, value=sent, check=True)
                                     deb_print("L{} global (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
-                              except: 
+                              except Exception as e: 
                                     print("L{} search fail".format(n))
+                                    print("Error : {}".format(e))
                                     err[inconllFile]+=1
                         else:
                               print("L{} search fail".format(n))
