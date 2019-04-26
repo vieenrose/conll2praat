@@ -10,13 +10,13 @@ fichiers .textgrid. Il ne supprime pas la couche existante mais en crée une nou
 
 ## Utilisation
 
-```
 Le script se lance en ligne de commande de la façon suivante :
+
+```
 python exporter.py fichier_conll10 fichier_textgrid répertoire_résultats
 ```
-or 
+ou
 ```
-Le script se lance en ligne de commande de la façon suivante :
 python3 exporter.py fichier_conll10 fichier_textgrid répertoire_résultats
 ```
 
