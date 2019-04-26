@@ -2,6 +2,8 @@
 
 (S. Duchemin – 18/04/19)
 
+![Example d'un fichier Praat TextGrid augmenté](https://github.com/vieenrose/conll2praat/blob/master/sample.png)
+
 ## Objectif
 
 Ce script permet de récupérer les nouvelles annotations en macrosyntaxe présentes dans des
