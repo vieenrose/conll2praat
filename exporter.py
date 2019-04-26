@@ -114,7 +114,6 @@ class TextGridPlus(pympi.Praat.TextGrid):
               :param str codec: Text encoding for the input. Note that this will be
                   ignored for binary TextGrids.
               """
-              print('inside from  file') #debug
               
               # extract TextGrid form Analor file (.or)
               if self.extractTextGridFromAnalorFile(ifile) : 
@@ -411,22 +410,20 @@ if __name__ == '__main__':
           #lecture du fichier tabulaire (CoNLL-U)
           conll  = csv.reader(open(conll_path, 'r'), delimiter='\t', quotechar='\\') 
           
+          print('\t{:s} {:s}'.format('<-',conll_path))
           # detection of textgrid file encoding:utf-8, ascii, etc.
           enc[inTgfile] = get_encoding(inTg_path)
-          
+          print('\t{:s} {:s} [{}]'.format('<-',inTg_path, enc[inTgfile] if enc[inTgfile] else 'unknown'))
+          outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED','TextGrid')
+          print('\t{:s} {:s} [{}]'.format('->',outputTg_path, 'binary'))
           
           try:
             tg     = TextGridPlus(file_path=inTg_path, codec=enc[inTgfile])               #lecture du fichier textgrid (Praat)
-            outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED','TextGrid')
+            
           except  Exception as e:
             print('Error: {}'.format(e))
             continue
       
-          print('\t{:s} {:s}'.format('<-',conll_path))
-          print('\t{:s} {:s} [{}]'.format('<-',inTg_path, enc[inTgfile] if enc[inTgfile] else 'unknown'))
-          print('\t{:s} {:s} [{}]'.format('->',outputTg_path, 'binary'))
-          
-          
           # handel diff. reference tier names
           ref = None
           for refTierName in refTierNames :
