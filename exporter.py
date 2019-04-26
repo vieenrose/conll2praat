@@ -351,7 +351,7 @@ def show_list_of_file_pair (conll_tg_pairs, err_cnt = None, enc_dict = None, rev
             string_to_display = u'{}:\t{:5s}: {}\n\t{:5s}: {}'.format(n,'CoNLL-U',conll,'TextGrid',tg)
             # encoding
             if enc_dict : 
-                  if conll in enc_dict.keys():
+                  if tg in enc_dict.keys():
                         enc = enc_dict[tg]
                         if enc: 
                               string_to_display += ' [{}]\n'.format(enc)
@@ -408,15 +408,15 @@ if __name__ == '__main__':
          
           conll  = csv.reader(open(conll_path, 'r'), delimiter='\t', quotechar='\\') #lecture du fichier tabulaire (CoNLL-U)
           try:
-            enc[inTg_path] = get_encoding(inTg_path)
-            tg     = TextGridPlus(file_path=inTg_path, codec=enc[inTg_path])               #lecture du fichier textgrid (Praat)
+            enc[inTgfile] = get_encoding(inTg_path)
+            tg     = TextGridPlus(file_path=inTg_path, codec=enc[inTgfile])               #lecture du fichier textgrid (Praat)
             outputTg_path = args.praat_out+'/'+insert_to_basename(inTgfile,'_UPDATED','TextGrid')
           except:
             print('error: fail to read {}'.format(inTg_path))
             continue
       
           print('\t{:s} {:s}'.format('<-',conll_path))
-          print('\t{:s} {:s} [{}]'.format('<-',inTg_path, enc[inTg_path] if enc[inTg_path] else 'unknown'))
+          print('\t{:s} {:s} [{}]'.format('<-',inTg_path, enc[inTgfile] if enc[inTgfile] else 'unknown'))
           print('\t{:s} {:s} [{}]'.format('->',outputTg_path, 'binary'))
           
           
