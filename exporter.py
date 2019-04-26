@@ -477,8 +477,8 @@ if __name__ == '__main__':
                         try:
                               dest.add_interval(begin=begin, end=end, value=sent, check=True)
                         except Exception as e:
-                              print('Warning: Anti-overlaps')
-                              print("Error : {}".format(e))
+                              print("Error @ L{} of the CoNLL : {}".format(n,e))
+                              err[inconllFile]+=1
                         
                   else:
                         # try a global search but with a more strict threshold for distance
@@ -491,11 +491,10 @@ if __name__ == '__main__':
                                     dest.add_interval(begin=begin, end=end, value=sent, check=True)
                                     deb_print("L{} global (begin,end) = ({:8.3f},{:8.3f})".format(n,begin,end))
                               except Exception as e: 
-                                    print("L{} search fail".format(n))
-                                    print("Error : {}".format(e))
+                                    print("Error @ L{} of the CoNLL : {}".format(n,e))
                                     err[inconllFile]+=1
                         else:
-                              print("L{} search fail".format(n))
+                              print("Search Fails @ L{} of the CoNLL".format(n))
                               err[inconllFile]+=1
                   
                   # préparation à la prochaine phrase
