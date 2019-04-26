@@ -12,15 +12,22 @@ fichiers .textgrid. Il ne supprime pas la couche existante mais en crée une nou
 
 ```
 Le script se lance en ligne de commande de la façon suivante :
+python exporter.py fichier_conll10 fichier_textgrid répertoire_résultats
+```
+or 
+```
+Le script se lance en ligne de commande de la façon suivante :
 python3 exporter.py fichier_conll10 fichier_textgrid répertoire_résultats
 ```
+
 ## Entrées
 
-- Un fichier ou un répertoire contenant des fichiers CoNLL-U **.conll**
+- Un fichier ou un répertoire contenant des fichiers [CoNLL-U](http://universaldependencies.org/format.html) **.conll**
 - Un fichier ou un répertoire contenant des fichiers 
-    - Praat **.TextGrid**
-    - Praat Binaire **.Collection**
-    - Analor **.or**
+    - [format Praat](http://www.fon.hum.uva.nl/praat/manual/TextGrid_file_formats.html) 
+        - TextGrid **.TextGrid**
+        - Praat Binaire **.Collection**
+    - [format Analor](http://www.lattice.cnrs.fr/Analor) **.or**
 
 ## Sortie
 
