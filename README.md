@@ -2,6 +2,8 @@
 
 (S. Duchemin – 18/04/19)
 
+![Example d'un fichier Praat TextGrid augmenté](https://github.com/vieenrose/conll2praat/blob/master/sample.png)
+
 ## Objectif
 
 Ce script permet de récupérer les nouvelles annotations en macrosyntaxe présentes dans des
@@ -10,13 +12,13 @@ fichiers .textgrid. Il ne supprime pas la couche existante mais en crée une nou
 
 ## Utilisation
 
-```
 Le script se lance en ligne de commande de la façon suivante :
+
+```
 python exporter.py fichier_conll10 fichier_textgrid répertoire_résultats
 ```
-or 
+ou
 ```
-Le script se lance en ligne de commande de la façon suivante :
 python3 exporter.py fichier_conll10 fichier_textgrid répertoire_résultats
 ```
 
