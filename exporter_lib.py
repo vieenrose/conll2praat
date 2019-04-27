@@ -73,7 +73,6 @@ def get_encoding(filepath):
 	except Exception as e:
 		m = magic.Magic(mime_encoding=True)
 		encoding = m.from_buffer(blob)
-	if 'ascii' in encoding  : encoding= 'ascii'
 	return encoding
 
 # extend original TextGrid reader to
