@@ -73,7 +73,7 @@ def get_encoding(filepath):
 	except Exception as e:
 		m = magic.Magic(mime_encoding=True)
 		encoding = m.from_buffer(blob)
-	if u'ascii' in encoding  : encoding= u'ascii'
+	if 'ascii' in encoding  : encoding= 'ascii'
 	return encoding
 
 # extend original TextGrid reader to
@@ -153,7 +153,7 @@ class TextGridPlus(pympi.Praat.TextGrid):
       # in order to control if enable / disable Ananor File support (ie. .or)
       def __init__(self, file_path, codec, analorFileEn=False):
               self.analorFileEn=analorFileEn
-              pympi.Praat.TextGrid.__init__(self, file_path, codec)
+              pympi.Praat.TextGrid.__init__(self, file_path=file_path, codec=codec)
 
       def from_file(self, ifile, codec='ascii'):
               """Read textgrid from stream.
