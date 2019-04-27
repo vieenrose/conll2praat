@@ -127,7 +127,7 @@ class TextGridPlus(pympi.Praat.TextGrid):
                                       raise Exception('Tiertype does not exist.')
 
                                 # form a tier
-                                tier = pymip.Praat.Tier(0, 0, name=nom, tier_type=tier_type)
+                                tier = pympi.Praat.Tier(0, 0, name=nom, tier_type=tier_type)
                                 self.tiers.append(tier)
                                 tier.xmin = tlims[0]
                                 tier.xmax = tlims[-1]

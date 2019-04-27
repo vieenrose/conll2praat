@@ -128,7 +128,7 @@ if __name__ == '__main__':
           try:
             tg     = TextGridPlus(file_path=inTg_path, codec=enc[inTgfile], analorFileEn=javaobj_installed)
           except  Exception as e:
-            err_print('{}'.format(e)+'(here)')
+            err_print('TextGridPlus constructor fails : {}'.format(e))
             continue
 
           # handel diff. reference tier names
