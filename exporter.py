@@ -81,9 +81,11 @@ def core_routine(conll,srcCol,pauseSign,dest,ref, num_sent_to_read = -1):
 
 if __name__ == '__main__':
 
-      # filelists / tiernames / constants
-      if javaobj_installed :
-           warning_print('\'javaobj\' not detected, Analor file (.or) support disabled !')
+      # inform state for Analor file support
+      if javaobj_installed:
+             info_print('\'javaobj\' detected, Analor file support will be enabled')
+      else :
+             warning_print('\'javaobj\' not detected, Analor file (.or) support disabled')
 
       # creattion of a frendly command-line interface using argparse
       parser = argparse.ArgumentParser(description='conll2praat exporter')
@@ -124,9 +126,9 @@ if __name__ == '__main__':
           info_print('\t{:s} {:s} [{}]'.format('->',outputTg_path, 'binary'))
 
           try:
-            tg     = TextGridPlus(file_path=inTg_path, codec=enc[inTgfile])               #lecture du fichier textgrid (Praat)
+            tg     = TextGridPlus(file_path=inTg_path, codec=enc[inTgfile], analorFileEn=javaobj_installed)
           except  Exception as e:
-            err_print(e)
+            err_print('{}'.format(e)+'(here)')
             continue
 
           # handel diff. reference tier names
@@ -178,7 +180,7 @@ if __name__ == '__main__':
 
           err[inconllFile]=err_num
           tg.to_file(outputTg_path, mode='binary', codec='utf-8')
-          info_print("\n\nDONE.\n\n")
+          info_print("DONE.\n")
 
       info_print("Summaray of processed file(s): ")
       list_of_file_pair_print(conll_tg_pairs_bak, err_cnt = err, enc_dict = enc)

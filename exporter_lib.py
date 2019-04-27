@@ -10,8 +10,13 @@
 
 # dependencies
 import csv,os,argparse,collections,sys,codecs,re,struct,difflib,pympi.Praat, magic
-try: import javaobj; javaobj_installed = True # it has some issues with python3
-except Exception as e : javaobj_installed = False; warning_print(e)
+
+# try tp enable javaobj for analor file support
+javaobj_installed = True
+try:
+       import javaobj
+except Exception as e:
+       javaobj_installed = False
 
 # debug setting
 DEBUG_EN = False
@@ -80,9 +85,6 @@ class TextGridPlus(pympi.Praat.TextGrid):
 
             SuccessOrNot = False
 
-            # not process Analor file when javaobj is not avaliable
-            if not javaobj_installed: return SuccessOrNot
-
             try:
                   marshaller = javaobj.JavaObjectUnmarshaller(ifile)
             except IOError:
@@ -147,6 +149,11 @@ class TextGridPlus(pympi.Praat.TextGrid):
             ifile.seek(0, 0)
             return SuccessOrNot
 
+      # extend the original class constructor to have an additional arugment 'analorFileEn'
+      # in order to control if enable / disable Ananor File support (ie. .or)
+      def __init__(self, file_path, codec, analorFileEn=False):
+              self.analorFileEn=analorFileEn
+              pympi.Praat.TextGrid.__init__(self, file_path, codec)
 
       def from_file(self, ifile, codec='ascii'):
               """Read textgrid from stream.
@@ -155,91 +162,94 @@ class TextGridPlus(pympi.Praat.TextGrid):
                   ignored for binary TextGrids.
               """
 
-              # extract TextGrid form Analor file (.or)
-              if self.extractTextGridFromAnalorFile(ifile) :
-                    pass
-              # read a Textgrid or extract TextGrid from Collection in Binary Format
-              elif ifile.read(12) == b'ooBinaryFile':
-                  def bin2str(ifile):
-                      textlen = struct.unpack('>h', ifile.read(2))[0]
-                      # Single byte characters
-                      if textlen >= 0:
-                          return ifile.read(textlen).decode('ascii')
-                      # Multi byte characters have initial len -1 and then \xff bytes
-                      elif textlen == -1:
-                          textlen = struct.unpack('>h', ifile.read(2))[0]
-                          data = ifile.read(textlen*2)
-                          # Hack to go from number to unicode in python3 and python2
-                          fun = unichr if 'unichr' in __builtins__ else chr
-                          charlist = (data[i:i+2] for i in range(0, len(data), 2))
-                          return u''.join(
-                              fun(struct.unpack('>h', i)[0]) for i in charlist)
+              # try as an Analor file (.or) if the support is enabled
+              isAnalorFile = False
+              if self.analorFileEn: isAnalorFile = self.extractTextGridFromAnalorFile(ifile)
 
-		  # only difference is here :in the case of a Praat Collection
-		  # jump to the begining of the embedded TextGrid object
-                  if ifile.read(ord(ifile.read(1))) == b'Collection': # skip oo type
-                        self.jump2TextGridBin(ifile, codec)
+              # try as a Praat TextGrid / Collection file
+              if not isAnalorFile :
+	              # read a Textgrid or extract TextGrid from Collection in Binary Format
+	              if ifile.read(12) == b'ooBinaryFile':
+	                  def bin2str(ifile):
+	                      textlen = struct.unpack('>h', ifile.read(2))[0]
+	                      # Single byte characters
+	                      if textlen >= 0:
+	                          return ifile.read(textlen).decode('ascii')
+	                      # Multi byte characters have initial len -1 and then \xff bytes
+	                      elif textlen == -1:
+	                          textlen = struct.unpack('>h', ifile.read(2))[0]
+	                          data = ifile.read(textlen*2)
+	                          # Hack to go from number to unicode in python3 and python2
+	                          fun = unichr if 'unichr' in __builtins__ else chr
+	                          charlist = (data[i:i+2] for i in range(0, len(data), 2))
+	                          return u''.join(
+	                              fun(struct.unpack('>h', i)[0]) for i in charlist)
 
-                  self.xmin = struct.unpack('>d', ifile.read(8))[0]
-                  self.xmax = struct.unpack('>d', ifile.read(8))[0]
-                  ifile.read(1)  # skip <exists>
-                  self.tier_num = struct.unpack('>i', ifile.read(4))[0]
-                  for i in range(self.tier_num):
-                      tier_type = ifile.read(ord(ifile.read(1))).decode('ascii')
-                      name = bin2str(ifile)
-                      tier = pympi.Praat.Tier(0, 0, name=name, tier_type=tier_type)
-                      self.tiers.append(tier)
-                      tier.xmin = struct.unpack('>d', ifile.read(8))[0]
-                      tier.xmax = struct.unpack('>d', ifile.read(8))[0]
-                      nint = struct.unpack('>i', ifile.read(4))[0]
-                      for i in range(nint):
-                          x1 = struct.unpack('>d', ifile.read(8))[0]
-                          if tier.tier_type == 'IntervalTier':
-                              x2 = struct.unpack('>d', ifile.read(8))[0]
-                          text = bin2str(ifile)
-                          if tier.tier_type == 'IntervalTier':
-                              tier.intervals.append((x1, x2, text))
-                          elif tier.tier_type == 'TextTier':
-                              tier.intervals.append((x1, text))
-                          else:
-                              raise Exception('Tiertype does not exist.')
-             # read a TextGrid file in long/ short text format
-              else:
-                  def nn(ifile, pat):
-                      line = next(ifile).decode(codec)
-                      return pat.search(line).group(1)
+			  # only difference is here :in the case of a Praat Collection
+			  # jump to the begining of the embedded TextGrid object
+	                  if ifile.read(ord(ifile.read(1))) == b'Collection': # skip oo type
+	                        self.jump2TextGridBin(ifile, codec)
 
-                  regfloat = re.compile('([\d.]+)\s*$', flags=re.UNICODE)
-                  regint = re.compile('([\d]+)\s*$', flags=re.UNICODE)
-                  regstr = re.compile('"(.*)"\s*$', flags=re.UNICODE)
-                  # Skip the Headers and empty line
-                  next(ifile), next(ifile), next(ifile)
-                  self.xmin = float(nn(ifile, regfloat))
-                  self.xmax = float(nn(ifile, regfloat))
-                  # Skip <exists>
-                  line = next(ifile)
-                  short = line.strip() == b'<exists>'
-                  self.tier_num = int(nn(ifile, regint))
-                  not short and next(ifile)
-                  for i in range(self.tier_num):
-                      not short and next(ifile) # skip item[]: and item[\d]:
-                      tier_type = nn(ifile, regstr)
-                      name = nn(ifile, regstr)
-                      tier = pympi.Praat.Tier(0, 0, name=name, tier_type=tier_type)
-                      self.tiers.append(tier)
+	                  self.xmin = struct.unpack('>d', ifile.read(8))[0]
+	                  self.xmax = struct.unpack('>d', ifile.read(8))[0]
+	                  ifile.read(1)  # skip <exists>
+	                  self.tier_num = struct.unpack('>i', ifile.read(4))[0]
+	                  for i in range(self.tier_num):
+	                      tier_type = ifile.read(ord(ifile.read(1))).decode('ascii')
+	                      name = bin2str(ifile)
+	                      tier = pympi.Praat.Tier(0, 0, name=name, tier_type=tier_type)
+	                      self.tiers.append(tier)
+	                      tier.xmin = struct.unpack('>d', ifile.read(8))[0]
+	                      tier.xmax = struct.unpack('>d', ifile.read(8))[0]
+	                      nint = struct.unpack('>i', ifile.read(4))[0]
+	                      for i in range(nint):
+	                          x1 = struct.unpack('>d', ifile.read(8))[0]
+	                          if tier.tier_type == 'IntervalTier':
+	                              x2 = struct.unpack('>d', ifile.read(8))[0]
+	                          text = bin2str(ifile)
+	                          if tier.tier_type == 'IntervalTier':
+	                              tier.intervals.append((x1, x2, text))
+	                          elif tier.tier_type == 'TextTier':
+	                              tier.intervals.append((x1, text))
+	                          else:
+	                              raise Exception('Tiertype does not exist.')
+	             # read a TextGrid file in long/ short text format
+	              else:
+	                  def nn(ifile, pat):
+	                      line = next(ifile).decode(codec)
+	                      return pat.search(line).group(1)
 
-                      tier.xmin = float(nn(ifile, regfloat))
-                      tier.xmax = float(nn(ifile, regfloat))
-                      for i in range(int(nn(ifile, regint))):
-                          not short and next(ifile)  # skip intervals [\d]
-                          x1 = float(nn(ifile, regfloat))
-                          if tier.tier_type == 'IntervalTier':
-                              x2 = float(nn(ifile, regfloat))
-                              t = nn(ifile, regstr)
-                              tier.intervals.append((x1, x2, t))
-                          elif tier.tier_type == 'TextTier':
-                              t = nn(ifile, regstr)
-                              tier.intervals.append((x1, t))
+	                  regfloat = re.compile('([\d.]+)\s*$', flags=re.UNICODE)
+	                  regint = re.compile('([\d]+)\s*$', flags=re.UNICODE)
+	                  regstr = re.compile('"(.*)"\s*$', flags=re.UNICODE)
+	                  # Skip the Headers and empty line
+	                  next(ifile), next(ifile), next(ifile)
+	                  self.xmin = float(nn(ifile, regfloat))
+	                  self.xmax = float(nn(ifile, regfloat))
+	                  # Skip <exists>
+	                  line = next(ifile)
+	                  short = line.strip() == b'<exists>'
+	                  self.tier_num = int(nn(ifile, regint))
+	                  not short and next(ifile)
+	                  for i in range(self.tier_num):
+	                      not short and next(ifile) # skip item[]: and item[\d]:
+	                      tier_type = nn(ifile, regstr)
+	                      name = nn(ifile, regstr)
+	                      tier = pympi.Praat.Tier(0, 0, name=name, tier_type=tier_type)
+	                      self.tiers.append(tier)
+
+	                      tier.xmin = float(nn(ifile, regfloat))
+	                      tier.xmax = float(nn(ifile, regfloat))
+	                      for i in range(int(nn(ifile, regint))):
+	                          not short and next(ifile)  # skip intervals [\d]
+	                          x1 = float(nn(ifile, regfloat))
+	                          if tier.tier_type == 'IntervalTier':
+	                              x2 = float(nn(ifile, regfloat))
+	                              t = nn(ifile, regstr)
+	                              tier.intervals.append((x1, x2, t))
+	                          elif tier.tier_type == 'TextTier':
+	                              t = nn(ifile, regstr)
+	                              tier.intervals.append((x1, t))
 
       def jump2TextGridBin(self, ifile, codec='ascii', keyword =  b'\x08TextGrid'):
             binstr = b''
