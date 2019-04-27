@@ -78,6 +78,40 @@ def core_routine(conll,srcCol,pauseSign,dest,ref, num_sent_to_read = -1):
                   tokens = []
 
           return err_num,dist_tot
+          
+          
+def core_routine_with_known_ref_tier (tg,conll_path,srcCol,pauseSign,destTierName,valideRefTierName,num_sent_to_read=-1):
+        # read the ref. tier
+        refTier = tg.get_tier(valideRefTierName)
+        # initilize the dest. tier
+        tg.remove_tier(destTierName)
+        destTier = tg.add_tier(destTierName)
+        # export the transcription from conll file
+        with open(conll_path, 'r') as f:
+                    conllReader  = csv.reader(f, delimiter='\t', quotechar='\\')
+                    err_num,dist=core_routine(conllReader,srcCol,pauseSign,destTier,refTier,num_sent_to_read)
+        # return error indicators
+        return err_num, dist
+        
+def detect_ref_tier(tg,conll_path,srcCol,pauseSign,destTierName,num_sent_to_read=10):
+  warning_print('Registered time reference tiers do not exist in TextGrid, launch auto-detection !')
+
+  err_by_tier = collections.Counter()
+  dist_by_tier = collections.Counter()
+
+  # try all tier as time referece tiers one by one
+  for tierName in avaliableTierNames :
+          info_print('try {}'.format(tierName))
+          # try 10 sentences for each tier and collect their accumulated edit distance
+          err_by_tier[tierName],dist_by_tier[tierName] = \
+          core_routine_with_known_ref_tier(tg,conll_path,srcCol,pauseSign,destTierName,tierName, num_sent_to_read)
+  
+  # remove the detination generated during trail
+  tg.remove_tier(destTierName)
+
+  # use the best one to make final exporting
+  best_ref_name, best_dist = dist_by_tier.most_common()[-1]
+  return best_ref_name, best_dist
 
 if __name__ == '__main__':
 
@@ -104,7 +138,7 @@ if __name__ == '__main__':
       out_rep     = args.praat_out
       if not os.path.exists(out_rep):
               os.makedirs(out_rep)
-      refTierNames = ['mot','MOT','TokensAlign']
+      refTierNames = ['mot','MOT','TokensAlign'] # set refTierNames if you want an auto-deteciton by default
       destTierName = 'tx_new'
       pauseSign    = '#'
       srcCol       = 2 # 'FORM' (CoNLL)
@@ -130,55 +164,22 @@ if __name__ == '__main__':
           except  Exception as e:
             err_print('TextGridPlus constructor fails : {}'.format(e))
             continue
-
+            
           # handel diff. reference tier names
-          ref = None
-          for refTierName in refTierNames :
-              try:
-                  ref    = tg.get_tier(refTierName)  #tier de repères temporels ('mot')
-                  break
-              except IndexError:
-                  pass
-          if ref:
-              dest   = tg.add_tier(destTierName) #tier de destination ('tx_new')
-              with open(conll_path, 'r') as f:
-                                   conllReader  = csv.reader(f, delimiter='\t', quotechar='\\')
-                                   err_num,best_dist=core_routine(conllReader,srcCol,pauseSign,dest,ref)
+          avaliableTierNames = [t.name for  t in tg.get_tiers()]
+          valideRefTierNames = list(set(avaliableTierNames) & set(refTierNames))
+          # make exportaiton if a ref. tier is listed in registered in refTierNames
+          if valideRefTierNames:
+			        err_num,dist=core_routine_with_known_ref_tier(tg,conll_path,srcCol,pauseSign,destTierName,valideRefTierNames[0])
+          # ortherwise lauche ref. tier detection
           else:
-                          warning_print('by defaut time reference tier fails, launch auto-detection !')
-                          err_nums = collections.Counter()
-                          dists = collections.Counter()
-
-                          all_tier_names = [tier.name for tier in tg.get_tiers()]
-                          for tierName in all_tier_names :
-                                  tg.remove_tier(destTierName)
-                                  dest = tg.add_tier(destTierName) #tier de destination ('tx_new')
-                                  ref = tg.get_tier(tierName)
-      	                          #lecture du fichier tabulaire (CoNLL-U)
-                                  with open(conll_path, 'r') as f:
-                                        conllReader  = csv.reader(f, delimiter='\t', quotechar='\\')
-					# test for 10 sentences CoNLL to get an idea about the error rate of each tier
-					# as time ref. tier
-                                        err_nums[ref.name],dists[ref.name] = core_routine(conllReader,srcCol,pauseSign,dest,ref, num_sent_to_read=10)
-
-                          if not err_nums or not dists:
-                                        err_print('cannot find a good reference tier !')
-                                        continue
-
-                          # remove the output tier created during test
-                          tg.remove_tier(destTierName)
-                          dest   = tg.add_tier(destTierName) #tier de destination ('tx_new')
-                          # get the best matched tier for time ref. use with least accumulated edit distance
-                          best_ref_name, best_dist = dists.most_common()[-1]
-                          debug_print('{(name of tier),(cost of tier as time ref.)}',dists) # debug
-                          # final output based on the rigth ref. tier
-                          info_print('detect \'{}\' as time reference tier'.format(best_ref_name))
-                          ref = tg.get_tier(best_ref_name)  #tier de repères temporels ('mot')
-                          with open(conll_path, 'r') as f:
-                                        conllReader  = csv.reader(f, delimiter='\t', quotechar='\\')
-                                        err_num,best_dist=core_routine(conllReader,srcCol,pauseSign,dest,ref)
+                          best_ref_name,best_dist=\
+                          detect_ref_tier(tg,conll_path,srcCol,pauseSign,destTierName,num_sent_to_read=10)
+                          info_print('Set \'{}\' as time reference tier'.format(best_ref_name))
+                          err_num, dist = core_routine_with_known_ref_tier(tg,conll_path,srcCol,pauseSign,destTierName,best_ref_name)
 
           err[inconllFile]=err_num
+          # remark: dy default, export TextGrid object in binaray format
           tg.to_file(outputTg_path, mode='binary', codec='utf-8')
           info_print("DONE.\n")
 
