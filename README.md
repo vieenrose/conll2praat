@@ -66,7 +66,7 @@ suivante.
 1. Tous les fichiers .textgrid n'utilisant pas le même nom pour la tire “mot”, le script ne parvenait
     pas à récupérer la tire en question. Pour l'instant, le script peut traiter les noms suivants :
     [“mot”, “MOT”, “TokensAlign”]. Il faudra mettre le script à jour dans le cas où d'autres noms
-    seraient utilisés.
+    seraient utilisés. (MàJ: la détection de la tire “mot“ est maintenant automatisée.)
 2. Puisque l'alignement se fait progressivement et dépend du dérouler de la tire “mot” et du
     fichier CoNLL, il pourra y avoir des erreurs d'alignements si des phrases sont manquantes ou
     bien dans le désordre.
