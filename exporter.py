@@ -128,6 +128,7 @@ def detect_ref_tier(tg,
                     srcCol,
                     pauseSign,
                     destTierName,
+                    avaliableTierNames,
                     num_sent_to_read=10):
     warning_print(
         'Registered time reference tiers do not exist in TextGrid, launch auto-detection !'
@@ -225,6 +226,7 @@ if __name__ == '__main__':
                                                        srcCol,
                                                        pauseSign,
                                                        destTierName,
+                                                       avaliableTierNames,
                                                        num_sent_to_read=10)
             info_print(
                 'Set \'{}\' as time reference tier'.format(best_ref_name))
