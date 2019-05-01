@@ -135,20 +135,33 @@ from exporter_lib import *
 
 if __name__ == '__main__':
 
-    infolder = 'export'
-    outfolder = 'export_prenucleus'
-    if not os.path.exists(outfolder):
-        os.makedirs(outfolder)
-    for filename in os.listdir(infolder):
+    # command-line interface for
+    # praat_in: input file path or folder path of praat TextGrid file(s)
+    # praat_out: output folder path for output praat TextGrid file
+    parser = argparse.ArgumentParser(description='identifier un ensemble ordonné des intervalles temporelles étiquetées aux composants illocutoires (CI) à chacun des *prénoyeaux* la transcription reportée en tant que la tire tx_new.')
+    parser.add_argument('praat_in', help='path to a input folder or a single input file')
+    parser.add_argument('praat_out', help='path to output folder')
+    args = parser.parse_args()
+
+    # output folder to create if not exists
+    if not os.path.exists(args.praat_out):
+        os.makedirs(args.praat_out)
+
+    # input file paths
+    infile_paths = []
+    if os.path.isfile(args.praat_in):
+        infile_paths = [args.praat_in]
+    elif os.path.isdir(args.praat_in):
+        infile_paths = [os.path.join(args.praat_in,infile) for infile in os.listdir(args.praat_in)]
+
+    for infile_path in infile_paths:
         try:
-            #infile = 'export/ABJ_GWA_03_M_UPDATED.TextGrid'
-            infile = os.path.join(infolder, filename)
-            outfile = insert_to_basename(infile, '_ADDED_PRENUCLEUS',
-                                         'TextGrid')
-            outfile = os.path.join(outfolder, os.path.basename(outfile))
-            encoding = get_encoding(infile)
+            outfile_path = insert_to_basename(infile_path, '_ADDED_PRENUCLEUS','TextGrid')
+            outfile_path = os.path.join(args.praat_out, os.path.basename(outfile_path))
+
+            encoding = get_encoding(infile_path)
             txTierName = 'tx_new'
-            tg = TextGridPlus(file_path=infile,
+            tg = TextGridPlus(file_path=infile_path,
                               codec=encoding,
                               analorFileEn=javaobj_installed)
             tx = tg.get_tier(txTierName)
@@ -156,7 +169,7 @@ if __name__ == '__main__':
                 t.name for t in tg.get_tiers()
                 if t.name != 'tx' and t.name != txTierName
             ]
-            tg.add_tier('prenucleus_ic_id')
+            tg.add_tier('prenucleus_ic_key')
             tg.add_tier('prenucleus_ic_value')
             prenucleus_ic_id = tg.get_tier('prenucleus_ic_id')
             prenucleus_ic_value = tg.get_tier('prenucleus_ic_value')
@@ -246,7 +259,7 @@ if __name__ == '__main__':
                                                      end=tmax,
                                                      value=IC,
                                                      check=True)
-            print('{} -> {}'.format(infile, outfile))
-            tg.to_file(filepath=outfile, codec='utf-8', mode='binary')
+            print('{} -> {}'.format(infile_path, outfile_path))
+            tg.to_file(filepath=outfile_path, codec='utf-8', mode='binary')
         except Exception as e:
             print(e)
