@@ -183,7 +183,12 @@ if __name__ == '__main__':
         tmin_sent, tmax_sent, sent = interval
         if sent:
             # segment sentence in illocutionrary units
-            IUs = sent.split('\\')
+            # using as delimiters
+            # typical boundaries between IUs '//'
+            # boudaries of parralled IUs '//+'
+            # boundaries of reported speech ' [ ' and ' ] '
+            IUs = re.split('//\+|//\=|//|\[|\]', sent)
+            IUs = [IU for IU in IUs if IU.strip()]
             for n, IU in enumerate(IUs):
 
                 # identify prenucleus and extract illocutionrary compoents
@@ -204,16 +209,18 @@ if __name__ == '__main__':
                     ICs = IU.split('<')[:-1]
                     cursor = 0
                     for IC in ICs:
-                        ref = subRefTier(refTier, tmin_IU, tmax_IU)
-                        tokens = IC.split(' ')
-                        [tmin_IC, tmax_IC, cursor,
-                         best_dist] = findTimes(tokens=tokens,
-                                                refTier=ref,
-                                                lowerbound=cursor,
-                                                upperbound=-1,
-                                                thld=1000,
-                                                pauseSign="#")
-                        IC_intervals.append((tmin_IC, tmax_IC, IC))
+                        IC = IC.strip()
+                        if IC:
+                            ref = subRefTier(refTier, tmin_IU, tmax_IU)
+                            tokens = IC.split(' ')
+                            [tmin_IC, tmax_IC, cursor,
+                             best_dist] = findTimes(tokens=tokens,
+                                                    refTier=ref,
+                                                    lowerbound=cursor,
+                                                    upperbound=-1,
+                                                    thld=1000,
+                                                    pauseSign="#")
+                            IC_intervals.append((tmin_IC, tmax_IC, IC))
 
                 if IC_intervals:
                     all_IC_intervals.append(IC_intervals)
@@ -230,5 +237,5 @@ if __name__ == '__main__':
                                              end=tmax,
                                              value=IC,
                                              check=True)
-    print('->{}'.format(fileout_path))
+    print('{} -> {}'.format(file_path, fileout_path))
     tg.to_file(filepath=fileout_path, codec='utf-8', mode='binary')
