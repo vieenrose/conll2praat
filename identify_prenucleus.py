@@ -135,107 +135,118 @@ from exporter_lib import *
 
 if __name__ == '__main__':
 
-    file_path = 'export/ABJ_GWA_03_M_UPDATED.TextGrid'
-    fileout_path = insert_to_basename(file_path, '_ADDED_PRENUCLEUS',
-                                      'TextGrid')
-    encoding = get_encoding(file_path)
-    txTierName = 'tx_new'
-    tg = TextGridPlus(file_path=file_path,
-                      codec=encoding,
-                      analorFileEn=javaobj_installed)
-    tx = tg.get_tier(txTierName)
-    avaliableTierNames = [
-        t.name for t in tg.get_tiers()
-        if t.name != 'tx' and t.name != txTierName
-    ]
-    tg.add_tier('prenucleus_ic_id')
-    tg.add_tier('prenucleus_ic_value')
-    prenucleus_ic_id = tg.get_tier('prenucleus_ic_id')
-    prenucleus_ic_value = tg.get_tier('prenucleus_ic_value')
-
-    sents = [interval[-1] for interval in tx.get_all_intervals()]
-    all_IC_intervals = []
-
-    best_ref_name, best_dist = detect_ref_tier(
-        tg,
-        sents,
-        srcCol=2,
-        pauseSign="#",
-        destTierName=txTierName,
-        avaliableTierNames=avaliableTierNames,
-        num_sent_to_read=10)
-    info_print('Set \'{}\' as time reference tier'.format(best_ref_name))
-
-    refTier = tg.get_tier(best_ref_name)
-
-    class subRefTier:
-        def __init__(self, tier, tmin, tmax):
-            all_intervals = tier.get_all_intervals()
-            self.intervals = [
-                interval for interval in all_intervals
-                if interval[0] >= tmin and interval[1] <= tmax
+    infolder = 'export'
+    outfolder = 'export_prenucleus'
+    if not os.path.exists(outfolder):
+        os.makedirs(outfolder)
+    for filename in os.listdir(infolder):
+        try:
+            #infile = 'export/ABJ_GWA_03_M_UPDATED.TextGrid'
+            infile = os.path.join(infolder, filename)
+            outfile = insert_to_basename(infile, '_ADDED_PRENUCLEUS',
+                                         'TextGrid')
+            outfile = os.path.join(outfolder, os.path.basename(outfile))
+            encoding = get_encoding(infile)
+            txTierName = 'tx_new'
+            tg = TextGridPlus(file_path=infile,
+                              codec=encoding,
+                              analorFileEn=javaobj_installed)
+            tx = tg.get_tier(txTierName)
+            avaliableTierNames = [
+                t.name for t in tg.get_tiers()
+                if t.name != 'tx' and t.name != txTierName
             ]
+            tg.add_tier('prenucleus_ic_id')
+            tg.add_tier('prenucleus_ic_value')
+            prenucleus_ic_id = tg.get_tier('prenucleus_ic_id')
+            prenucleus_ic_value = tg.get_tier('prenucleus_ic_value')
 
-        def get_all_intervals(self):
-            return self.intervals
+            sents = [interval[-1] for interval in tx.get_all_intervals()]
+            all_IC_intervals = []
 
-    for interval in tx.get_all_intervals():
-        tmin_sent, tmax_sent, sent = interval
-        if sent:
-            # segment sentence in illocutionrary units
-            # using as delimiters
-            # typical boundaries between IUs '//'
-            # boudaries of parralled IUs '//+'
-            # boundaries of reported speech ' [ ' and ' ] '
-            IUs = re.split('//\+|//\=|//|\[|\]', sent)
-            IUs = [IU for IU in IUs if IU.strip()]
-            for n, IU in enumerate(IUs):
+            best_ref_name, best_dist = detect_ref_tier(
+                tg,
+                sents,
+                srcCol=2,
+                pauseSign="#",
+                destTierName=txTierName,
+                avaliableTierNames=avaliableTierNames,
+                num_sent_to_read=10)
+            info_print(
+                'Set \'{}\' as time reference tier'.format(best_ref_name))
 
-                # identify prenucleus and extract illocutionrary compoents
-                IC_intervals = []
-                if ' < ' in IU:
-                    # identify the temporal limits of IU
-                    # inside the temporal limits of sentence
-                    ref = subRefTier(refTier, tmin_sent, tmax_sent)
-                    tokens = IU.split(' ')
-                    [tmin_IU, tmax_IU, cursor_out,
-                     best_dist] = findTimes(tokens=tokens,
-                                            refTier=ref,
-                                            lowerbound=0,
-                                            upperbound=-1,
-                                            thld=1000,
-                                            pauseSign="#")
-                    #print(tmin_IU, tmax_IU)
-                    ICs = IU.split('<')[:-1]
-                    cursor = 0
-                    for IC in ICs:
-                        IC = IC.strip()
-                        if IC:
-                            ref = subRefTier(refTier, tmin_IU, tmax_IU)
-                            tokens = IC.split(' ')
-                            [tmin_IC, tmax_IC, cursor,
+            refTier = tg.get_tier(best_ref_name)
+
+            class subRefTier:
+                def __init__(self, tier, tmin, tmax):
+                    all_intervals = tier.get_all_intervals()
+                    self.intervals = [
+                        interval for interval in all_intervals
+                        if interval[0] >= tmin and interval[1] <= tmax
+                    ]
+
+                def get_all_intervals(self):
+                    return self.intervals
+
+            for interval in tx.get_all_intervals():
+                tmin_sent, tmax_sent, sent = interval
+                if sent:
+                    # segment sentence in illocutionrary units
+                    # using as delimiters
+                    # typical boundaries between IUs '//'
+                    # boudaries of parralled IUs '//+'
+                    # boundaries of reported speech ' [ ' and ' ] '
+                    IUs = re.split('//\+|//\=|//|\[|\]', sent)
+                    IUs = [IU for IU in IUs if IU.strip()]
+                    for n, IU in enumerate(IUs):
+
+                        # identify prenucleus and extract illocutionrary compoents
+                        IC_intervals = []
+                        if ' < ' in IU:
+                            # identify the temporal limits of IU
+                            # inside the temporal limits of sentence
+                            ref = subRefTier(refTier, tmin_sent, tmax_sent)
+                            tokens = IU.split(' ')
+                            [tmin_IU, tmax_IU, cursor_out,
                              best_dist] = findTimes(tokens=tokens,
                                                     refTier=ref,
-                                                    lowerbound=cursor,
+                                                    lowerbound=0,
                                                     upperbound=-1,
                                                     thld=1000,
                                                     pauseSign="#")
-                            IC_intervals.append((tmin_IC, tmax_IC, IC))
+                            #print(tmin_IU, tmax_IU)
+                            ICs = IU.split('<')[:-1]
+                            cursor = 0
+                            for IC in ICs:
+                                IC = IC.strip()
+                                if IC:
+                                    ref = subRefTier(refTier, tmin_IU, tmax_IU)
+                                    tokens = IC.split(' ')
+                                    [tmin_IC, tmax_IC, cursor,
+                                     best_dist] = findTimes(tokens=tokens,
+                                                            refTier=ref,
+                                                            lowerbound=cursor,
+                                                            upperbound=-1,
+                                                            thld=1000,
+                                                            pauseSign="#")
+                                    IC_intervals.append((tmin_IC, tmax_IC, IC))
 
-                if IC_intervals:
-                    all_IC_intervals.append(IC_intervals)
+                        if IC_intervals:
+                            all_IC_intervals.append(IC_intervals)
 
-    for k, ICs_of_IU in enumerate(all_IC_intervals):
-        for n, IC_interval in enumerate(ICs_of_IU):
-            tmin, tmax, IC = IC_interval
-            print("{}.{}, ({},{}), '{}".format(k, n, tmin, tmax, IC))
-            prenucleus_ic_id.add_interval(begin=tmin,
-                                          end=tmax,
-                                          value='{}:{}'.format(k, n),
-                                          check=True)
-            prenucleus_ic_value.add_interval(begin=tmin,
-                                             end=tmax,
-                                             value=IC,
-                                             check=True)
-    print('{} -> {}'.format(file_path, fileout_path))
-    tg.to_file(filepath=fileout_path, codec='utf-8', mode='binary')
+            for k, ICs_of_IU in enumerate(all_IC_intervals):
+                for n, IC_interval in enumerate(ICs_of_IU):
+                    tmin, tmax, IC = IC_interval
+                    print("{}.{}, ({},{}), '{}".format(k, n, tmin, tmax, IC))
+                    prenucleus_ic_id.add_interval(begin=tmin,
+                                                  end=tmax,
+                                                  value='{}:{}'.format(k, n),
+                                                  check=True)
+                    prenucleus_ic_value.add_interval(begin=tmin,
+                                                     end=tmax,
+                                                     value=IC,
+                                                     check=True)
+            print('{} -> {}'.format(infile, outfile))
+            tg.to_file(filepath=outfile, codec='utf-8', mode='binary')
+        except Exception as e:
+            print(e)
