@@ -171,7 +171,7 @@ if __name__ == '__main__':
             ]
             tg.add_tier('prenucleus_ic_key')
             tg.add_tier('prenucleus_ic_value')
-            prenucleus_ic_id = tg.get_tier('prenucleus_ic_id')
+            prenucleus_ic_id = tg.get_tier('prenucleus_ic_key')
             prenucleus_ic_value = tg.get_tier('prenucleus_ic_value')
 
             sents = [interval[-1] for interval in tx.get_all_intervals()]
