@@ -70,7 +70,17 @@ def list_of_file_pair_print(conll_tg_pairs,
 
 
 ## 2. I/O handlers
-
+def listfiles(path):
+    filenames = None
+    folder_path = None
+    if os.path.isdir(path):
+        filenames = sorted(os.listdir(path))  # multiple files
+        folder_path = path
+    elif os.path.isfile(path):
+        filename = os.path.basename(path)
+        filenames = [filename]  # single file
+        folder_path = os.path.dirname(path)
+    return folder_path, filenames
 
 # detectot of file coding
 def auto_decode(input):

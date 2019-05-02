@@ -168,9 +168,10 @@ if __name__ == '__main__':
     parser.add_argument('praat_out', help='folder for output praat files')
     args = parser.parse_args()
     # make conll - praat pairs
-    conllFiles = os.listdir(args.conll_in)
-    conllFiles.sort()
-    inputTgFiles = os.listdir(args.praat_in)
+
+    conllFolderPath,conllFiles = listfiles(args.conll_in)
+    inputTgFolderPath, inputTgFiles = listfiles(args.praat_in)
+
     conll_tg_pairs = make_paires(conllFiles, inputTgFiles)
     conll_tg_pairs_bak = conll_tg_pairs
     info_print("File(s) to process : ")
@@ -191,11 +192,10 @@ if __name__ == '__main__':
     conll_tg_pairs = conll_tg_pairs[::-1]
     while conll_tg_pairs:
         inconllFile, inTgfile = conll_tg_pairs.pop()
-        conll_path = args.conll_in + '/' + inconllFile
-        inTg_path = args.praat_in + '/' + inTgfile
-
+        conll_path = os.path.join(conllFolderPath,inconllFile)
+        inTg_path = os.path.join(inputTgFolderPath,inTgfile)
         info_print('\t{:s} {:s}'.format('<-', conll_path))
-        # detection of textgrid file encoding:utf-8, ascii, etc.
+        # detection of textgrid file encoding:utf-8, ascii, etc
         enc[inTgfile] = get_encoding(inTg_path)
         info_print('\t{:s} {:s} [{}]'.format(
             '<-', inTg_path, enc[inTgfile] if enc[inTgfile] else 'unknown'))
