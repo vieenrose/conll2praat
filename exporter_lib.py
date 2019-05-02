@@ -9,7 +9,7 @@
 #     Luigi Liu
 
 # dependencies
-import csv, os, argparse, collections, sys, codecs, re, struct, difflib, pympi.Praat, magic
+import csv, os, argparse, collections, sys, codecs, re, struct, difflib, pympi.Praat, magic, chardet
 
 # try tp enable javaobj for analor file support
 javaobj_installed = True
@@ -73,6 +73,23 @@ def list_of_file_pair_print(conll_tg_pairs,
 
 
 # detectot of file coding
+def auto_decode(input):
+    if input:
+        if isinstance(input,(str,unicode)):
+            encoding = chardet.detect(input)['encoding']
+            return input.decode(encoding)
+        elif isinstance(input,list):
+            encoding = chardet.detect(''.join(input))['encoding']
+            ret = []
+            for x in input:
+                if x: x = x.decode(encoding)
+                ret.append(x)
+            return ret
+        else:
+            return input
+    else:
+        return input
+
 # ref: https://stackoverflow.com/questions/436220/how-to-determine-the-encoding-of-text
 def get_encoding(filepath):
     encoding = None
@@ -102,7 +119,6 @@ class TextGridPlus(pympi.Praat.TextGrid):
             return SuccessOrNot
 
         while True:
-
             # get one object
             pobj = marshaller.readObject()
             if pobj == 'FIN' or \
@@ -122,10 +138,10 @@ class TextGridPlus(pympi.Praat.TextGrid):
                     # get the metadata of tier
                     tlims = marshaller.readObject()
                     typ = marshaller.readObject()
-                    nom = marshaller.readObject()
-                    mots = marshaller.readObject()
+                    nom = auto_decode(marshaller.readObject())
+                    mots = auto_decode(marshaller.readObject())
                     bornes = marshaller.readObject()
-                    nomGuide = marshaller.readObject()
+                    nomGuide = auto_decode(marshaller.readObject())
 
                     # translation between 2 type naming
                     # between Analor and Praat version
@@ -200,6 +216,7 @@ class TextGridPlus(pympi.Praat.TextGrid):
                                     for i in range(0, len(data), 2))
                         return u''.join(
                             fun(struct.unpack('>h', i)[0]) for i in charlist)
+
 
                 # only difference is here :in the case of a Praat Collection
                 # jump to the begining of the embedded TextGrid object
