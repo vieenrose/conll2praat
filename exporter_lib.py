@@ -216,6 +216,7 @@ class TextGridPlus(pympi.Praat.TextGrid):
                     # Single byte characters
                     if textlen >= 0:
                         return ifile.read(textlen).decode('ascii')
+
                     # Multi byte characters have initial len -1 and then \xff bytes
                     elif textlen == -1:
                         textlen = struct.unpack('>h', ifile.read(2))[0]
@@ -450,17 +451,17 @@ def findTimes(tokens,
         width -= 1
 
     # verify if dist < 10% of sentence length
-    deb_print("\t@findTimes sent to match : '{}'".format(sent))
+    deb_print(u"\t@findTimes sent to match : '{}'".format(sent))
     if best_dist > thld * (len(sent)**1.1):
         tmin = -1
         tmax = -1
         cursor_out = -1
         deb_print(
-            "\t@findTimes err : best dist. '{}' too large".format(best_dist))
+            u"\t@findTimes err : best dist. '{}' too large".format(best_dist))
     else:
         tmax = intvs[best_end_n - 1][1]  # end time of the last interval
         cursor_out = best_end_n
-        deb_print("\t@findTimes sent found    : '{}'".format(
+        deb_print(u"\t@findTimes sent found    : '{}'".format(
             best_sent, tmin, tmax))
 
     return [tmin, tmax, cursor_out, best_dist]

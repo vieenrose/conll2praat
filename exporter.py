@@ -62,7 +62,7 @@ def core_routine(conll, srcCol, pauseSign, dest, ref, num_sent_to_read=-1):
                                       value=sent,
                                       check=True)
                 except Exception as e:
-                    err_print("Line {} @ CoNLL : {}".format(n, e))
+                    err_print(u"Line {} @ CoNLL : {}".format(n, e))
                     err_num += 1
 
             else:
@@ -85,7 +85,7 @@ def core_routine(conll, srcCol, pauseSign, dest, ref, num_sent_to_read=-1):
                             "Line {} global (begin,end) = ({:8.3f},{:8.3f})".
                             format(n, begin, end))
                     except Exception as e:
-                        err_print("Line {} @ CoNLL : {}".format(n, e))
+                        err_print(u"Line {} @ CoNLL : {}".format(n, e))
                         err_num += 1
                 else:
                     err_print("Search fails @ Line {} of the CoNLL".format(n))
@@ -139,7 +139,7 @@ def detect_ref_tier(tg,
 
     # try all tier as time referece tiers one by one
     for tierName in avaliableTierNames:
-        info_print('try {}'.format(tierName))
+        info_print(u'try {}'.format(tierName))
         # try 10 sentences for each tier and collect their accumulated edit distance
         err_by_tier[tierName],dist_by_tier[tierName] = \
                 core_routine_with_known_ref_tier(tg,conll_path,srcCol,pauseSign,destTierName,tierName, num_sent_to_read)
